@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FPGA tool perf results</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.0/dist/chart.min.js"></script>
+</head>
+
+<body>
+  <canvas id="runtime-chart" width="300" height="150"></canvas>
+  <canvas id="frequency-chart", width="300" height="150"></canvas>
+  <script>
+
+  new Chart(document.getElementById("runtime-chart"), {
+    type: 'line',
+    data: {
+      labels: [ "2021-08-09T13:19:36", "2021-08-09T18:19:15", "2021-08-10T01:10:50", "2021-08-10T06:02:33", "2021-08-10T13:39:25", "2021-08-10T16:49:06", "2021-08-10T22:44:42", "2021-08-11T08:39:48", "2021-08-11T08:49:43", "2021-08-11T21:20:40" ],
+      datasets: [
+          {
+            data: [ 361.394, 236.537, 234.775, 211.447, 397.236, 221.49, 246.477, 259.812, 239.452, 256.4 ],
+            label: "total runtime" ,
+            borderColor: "#ff0000",
+            fill: false
+          },
+      ]
+    },
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: "murax: total runtime"
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: function(v, idx, vx) {
+              return v + "s";
+            }
+          }
+        }
+      }
+    }
+  });
+  new Chart(document.getElementById("frequency-chart"), {
+    type: 'line',
+    data: {
+      labels: [ "2021-08-09T13:19:36", "2021-08-09T18:19:15", "2021-08-10T01:10:50", "2021-08-10T06:02:33", "2021-08-10T13:39:25", "2021-08-10T16:49:06", "2021-08-10T22:44:42", "2021-08-11T08:39:48", "2021-08-11T08:49:43", "2021-08-11T21:20:40" ],
+      datasets: [
+          {
+            data: [ 68.226, 69.178, 68.226, 68.226, 68.226, 68.226, 68.226, 68.226, 68.226, 68.226 ],
+            label: "actual frequency" ,
+            borderColor: "#00ff00",
+            fill: false
+          },
+      ]
+    },
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: "murax: actual frequency"
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: function(v, idx, vx) {
+              return v + "MHz";
+            }
+          }
+        }
+      }
+    }
+  });
+  </script>
+</body>
+</html>

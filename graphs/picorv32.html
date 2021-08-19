@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>FPGA tool perf results: project picorv32</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.0/dist/chart.min.js"></script>
+</head>
+<style>
+  #resource-graphs{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  #resource-graphs div {
+    width: 31vw;
+    max-width: 31vw;
+    max-height: 50vh;
+    margin: 1vh 1vw 1vw 1vh;
+  }
+  #topbar-legend {
+    max-height: 4em;
+    background-color: lightgrey;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+  }
+  #topbar-legend-flex {
+    display: flex;
+    flex-direction: row;
+  }
+  .topbar-legend-item {
+    margin: 0.1em 0.5em 0.5em 0.5em;
+  }
+  .topbar-legend-item div p {
+    margin-top: 0.5em;
+    margin-bottom: 0.1em;
+    font-size: 0.7em;
+    cursor: pointer;
+  }
+  .topbar-legend-color-indicator {
+    height: 0.5em;
+  }
+  .crosslined {
+    text-decoration: line-through;
+  }
+</style>
+
+<body>
+  <div id="topbar-platforms">
+    <select>
+      <option value="<all_configs>">(all configurations)</option>
+        <option value="icebreaker">icebreaker</option>
+        <option value="arty-a100t">arty-a100t</option>
+        <option value="basys3">basys3</option>
+        <option value="arty-a35t">arty-a35t</option>
+        <option value="zybo">zybo</option>
+    </select>
+  </div>
+  <div id="topbar-legend">
+    <div id="topbar-legend-flex">
+      <p>XD</p>
+    </div>
+  </div>
+
+  <canvas id="runtime-chart" width="300" height="150"></canvas>
+  <canvas id="frequency-chart", width="300" height="150"></canvas>
+  <div id="resource-graphs">
+    <div>
+      <canvas id="LUT-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="DFF-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="CARRY-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="IOB-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="BRAM-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="PLL-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="GLB-chart"></canvas>
+    </div>
+  </div>
+
+  <script>
+
+  let charts = [];
+
+  let dataset_sets = {
+    
+  }
+
+  function createLegendEntry(idx, name, color) {
+    return "<div class=\"topbar-legend-item\"><div><p id=\"topbar-legend-item-" +
+           idx + "\"onClick=\"toggleDataset(" + idx + ")\">" + name + "</p>" +
+           "</div><div style=\"background-color: " + color + ";\" " +
+           "class=\"topbar-legend-color-indicator\"></div></div>";
+  }
+
+  function makeLegend(chart) {
+    html_code = ""
+    ds_cnt = chart.data.datasets.length;
+    for (let i = 0; i < ds_cnt; i++) {
+      dataset = chart.data.datasets[i];
+      html_code += createLegendEntry(i, dataset.label, dataset.borderColor);
+    }
+
+    document.getElementById("topbar-legend-flex").innerHTML = html_code
+  }
+
+  function setDatasetVisible(idx, visibility) {
+    for (let i = 0; i < charts.length; i++) {
+      chart = charts[i];
+      chart.getDatasetMeta(idx).hidden = !visibility;
+      chart.update();
+    }
+  }
+
+  function onLegendClicked(event, legendItem, legend) {
+    idx = legendItem.datasetIndex
+    visibility = legendItem.hidden
+    setDatasetVisible(idx, visibility)
+  }
+
+  function toggleDataset(idx) {
+    for (let i = 0; i < charts.length; i++) {
+      chart = charts[i];
+      chart.getDatasetMeta(idx).hidden = !chart.getDatasetMeta(idx).hidden;
+      chart.update();
+    }
+
+    button = document.getElementById("topbar-legend-item-" + idx)
+    
+    if (charts[0].getDatasetMeta(idx).hidden)
+      button.className = "crosslined"
+    else
+      button.className = ""
+  }
+
+  function newLineChart(canvas_name, title, unitstr, labels, datasets, legend) {
+    return new Chart(document.getElementById(canvas_name), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
+      },
+      options: {
+        spanGaps: true,
+        plugins: {
+          title: {
+            display: true,
+            text: title
+          },
+          legend: {
+            display: legend,
+            onClick: onLegendClicked
+          }
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback: function(v, idx, vx) {
+                return v + unitstr;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  let firstChart = newLineChart(
+    "runtime-chart",
+    "picorv32: total runtime",
+    "s",
+    [ "2021-01-22 10:05:58", "2021-02-10 12:30:54", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 41.079, 56.607, 52.225, 42.332, 63.279, 43.102, 39.919, 45.038, 43.834, 45.63, 38.357, 49.709, 45.88, 47.643, 40.618, 51.88, 46.889, 46.921, 39.883, 42.495, 56.806, 47.059, 88.543, 57.361, 103.241, 105.974, 47.771, null, null, 67.718, 46.776, 134.044, 37.985, 81.856, 68.895, 35.894, 70.161, 39.548, 62.734, 54.125, 61.202, 83.807, 34.883, 65.598, 37.38, 42.264, 52.144, 52.49 ],
+                label: "icebreaker-nextpnr-ice40" ,
+                borderColor: "#3572ff",
+                fill: false
+            },
+            {
+                data: [ 207.69, null, 234.367, 244.698, 213.335, 212.306, 231.035, 202.341, null, 217.267, 209.223, 197.574, 222.682, 233.483, 386.302, 249.036, 211.289, 248.359, 198.875, 223.226, 352.87, 526.913, 322.78, 531.999, 470.729, 296.594, 302.0, 323.597, 267.199, 277.291, 299.964, 339.171, 389.721, 241.571, 256.315, 298.38, 364.808, 226.672, 236.507, 300.499, 346.713, 349.649, null, 228.224, 278.336, 191.014, 231.355, 210.901 ],
+                label: "arty-a100t-vivado" ,
+                borderColor: "#00a461",
+                fill: false
+            },
+            {
+                data: [ 312.995, null, 266.305, 220.188, 195.48, 229.227, 189.85, 208.107, null, 198.548, 213.242, 178.399, 205.894, 212.778, 219.537, 206.188, 206.697, 230.132, 258.263, 219.479, 261.06, 451.449, 440.132, 584.769, 284.1, 292.485, 345.894, 343.241, 263.217, 473.694, 308.204, 316.61, 287.453, 266.922, 203.318, 372.772, 281.347, 301.484, 210.052, 223.947, 222.277, 288.378, null, 254.789, 231.05, 213.505, 249.854, 210.253 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 218.204, null, 200.842, 256.385, 243.399, 218.448, 198.922, 183.933, null, 192.94, 219.323, 191.931, 221.535, 224.119, 246.156, 226.395, 196.976, 209.363, 215.851, 192.445, 351.167, 377.402, 304.699, 311.995, 338.494, 327.914, 485.271, 284.402, 265.324, 324.784, 300.381, 269.409, 274.014, 280.632, 286.655, 417.746, 273.509, 209.994, 221.904, 222.893, 221.234, 390.614, null, 183.349, 185.26, 179.259, 391.013, 238.376 ],
+                label: "arty-a35t-vivado" ,
+                borderColor: "#ff2e81",
+                fill: false
+            },
+            {
+                data: [ 233.705, null, 203.013, 220.916, 205.877, 205.579, 194.638, 170.828, null, 187.051, 181.531, 268.987, 197.314, 261.608, 241.431, 249.362, 196.315, 224.818, 230.192, 224.921, 455.477, 371.106, 343.924, 301.685, 454.078, 441.477, 456.616, 302.126, 508.065, 283.376, 324.445, 307.153, 239.69, 352.249, 219.453, 255.886, 353.225, 329.813, 344.808, 261.258, 301.361, 212.098, null, 208.649, 204.256, 284.941, 338.655, 236.932 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 102.52, null, 163.24, 108.32, 113.93, 114.29, 115.01, 92.41, null, 94.9, 103.1, 118.57, 84.16, 111.14, 107.62, 154.66, 91.62, 169.89, 179.75, 111.94, 186.64, 194.67, 142.48, 199.98, 195.03, 211.32, 232.4, null, null, 183.34, 149.84, 260.91, 147.8, 189.68, 140.15, 161.65, 147.7, 148.49, 166.29, 176.44, 174.02, 179.89, null, 152.92, 122.28, 122.42, 144.63, 145.12 ],
+                label: "arty-a100t-yosys-vivado" ,
+                borderColor: "#007cb0",
+                fill: false
+            },
+            {
+                data: [ 138.87, null, 91.2, 93.51, 93.86, 94.19, 97.15, 96.87, null, 84.27, 82.48, 91.43, 86.51, 151.34, 98.46, 93.37, 97.28, 85.32, 110.8, 96.06, 123.72, 217.8, 163.28, 237.52, 162.51, 180.13, 183.25, null, null, 123.24, 117.7, 176.44, 136.23, 120.47, 161.31, 136.86, 194.41, 172.11, 186.4, 188.16, 153.15, 156.86, null, 167.33, 104.92, 110.66, 133.02, 127.77 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ 142.24, null, 93.55, 93.76, 103.12, 87.48, 87.94, 103.47, null, 93.12, 83.85, 132.9, 82.22, 132.47, 93.01, 88.69, 78.8, 90.31, 105.6, 101.41, 133.94, 220.95, 123.89, 255.66, 194.89, 204.89, 205.3, null, null, 237.92, 157.89, 209.38, 126.17, 151.66, 127.47, 251.36, 191.42, 133.7, 150.5, 147.35, 133.83, 207.97, null, 130.48, 145.19, 121.74, 266.32, 132.02 ],
+                label: "arty-a35t-yosys-vivado" ,
+                borderColor: "#00c531",
+                fill: false
+            },
+            {
+                data: [ 87.66, null, 87.63, 82.75, 109.24, 89.97, 117.49, 74.88, null, 80.95, 87.43, 80.45, 79.24, 97.52, 95.4, 88.84, 79.76, 89.44, 92.44, 79.33, 180.61, 144.91, 140.27, 169.39, 164.63, 156.71, 162.17, null, null, 143.94, 144.48, 221.96, 178.98, 141.57, 121.1, 129.33, 145.84, 175.11, 127.35, 195.68, 126.42, 132.04, null, 195.71, 131.47, 156.02, 193.06, 177.07 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-nextpnr-fpga-interchange" ,
+                borderColor: "#7b39ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 435.042, null, 460.118, 434.999, 416.403, 448.511, 485.926, 475.934, 560.648, 490.265, null, null, null, 566.606, 537.901, 532.707, 747.446, 720.363, 605.462, 1139.617, 738.811, 950.405, 853.878, 873.307, 539.411, 717.981, 678.656, 978.667, 597.872, 772.492, 513.59, 776.269, 783.314, 638.781, 540.72, 599.277, 437.265, 643.153, 380.44, 518.723, 462.575, 434.988, 410.573, 1183.345 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 7469.402, 9396.873, 9228.037, 9614.765, null, 6397.049, 8579.071, 7827.662, 8016.111, 8802.962, 8439.518 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, 639.509, 550.955, 537.98, null, 524.65, 490.385, 585.091, 528.355, 545.399, 552.679, 587.908, 610.423, null, null, null, 704.796, 561.987, 598.217, 608.029, 753.791, 623.505, 747.869, 973.031, 868.274, 1000.663, 1331.471, 695.992, 656.993, 1321.762, 1241.801, 806.615, 745.306, 509.59, 586.843, 773.837, 504.044, 880.974, 653.213, 666.418, 1171.609, 466.621, 465.927, 512.635, 497.753, 570.187, 612.255 ],
+                label: "arty-a35t-vpr-fasm2bels" ,
+                borderColor: "#ffce0f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-fpga-interchange" ,
+                borderColor: "#09de00",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr" ,
+                borderColor: "#ff6733",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-ice40" ,
+                borderColor: "#ff13e1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-ice40" ,
+                borderColor: "#b1ff17",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 11987.504, 13359.872, 13350.495, 11839.532, null, 9292.738, 8843.585, 10669.518, 11005.25, 12138.918, 11255.331 ],
+                label: "arty-a35t-nextpnr-fpga-interchange" ,
+                borderColor: "#42ffea",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vivado" ,
+                borderColor: "#de00cb",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 133.22, null, null, null, null, 90.86, 109.13, 114.27, 112.63, 121.34, 165.82, 121.54, 150.48, null, null, 159.91, 103.0, 156.88, 93.67, 151.62, 91.04, 89.15, 145.79, 113.61, 95.12, 121.8, 92.59, 100.3, null, 103.62, 98.85, 72.04, 90.82, null ],
+                label: "arty-a35t-yosys-vivado-uhdm" ,
+                borderColor: "#0061cf",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr-fasm2bels" ,
+                borderColor: "#3df6ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 207.739, null, 182.242, 181.032, 198.969, 198.749, 201.33, 208.597, 270.802, 219.084, null, null, null, 207.37, 244.335, 205.312, 221.251, 332.34, 342.869, 294.577, 252.599, 314.388, 267.456, 380.443, 573.496, 333.967, 220.22, 252.469, 292.337, 315.859, 281.246, 450.286, 212.651, 234.043, 199.451, 255.095, 212.334, 241.405, 205.023, 221.845, 224.995, 233.734, 248.124, 231.681 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 179.171, null, 195.699, 193.359, 178.131, 192.774, 196.009, 167.403, 214.904, 223.854, null, null, null, 238.866, 211.803, 262.869, 294.647, 365.899, 406.682, 411.911, 470.801, 258.584, 384.784, 330.036, 456.417, 273.254, 306.518, 724.658, 283.293, 438.814, 235.724, 287.505, 315.055, 177.159, 409.221, 272.428, 187.058, 269.618, 172.279, 424.699, 198.01, 181.998, 259.343, 295.727 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 286.001, null, 258.989, 281.398, 254.62, 280.302, 269.193, 330.051, 405.41, 313.807, null, null, null, 359.251, 269.174, 284.822, 328.238, 345.132, 336.79, 672.937, 493.273, 484.407, 408.223, 360.044, 437.234, 557.944, 385.127, 918.72, 388.772, 476.015, 408.36, 467.636, 368.228, 319.797, 357.617, 297.807, 256.643, 502.852, 292.714, 367.949, 306.174, 262.242, 340.731, 406.766 ],
+                label: "arty-a100t-vpr" ,
+                borderColor: "#eb00d2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 161.45, null, null, null, null, 92.38, 102.92, 117.27, 99.19, 194.36, 176.96, 117.98, 167.06, null, null, 89.99, 129.47, 135.28, 121.36, 111.42, 126.37, 135.24, 87.04, 127.4, 84.06, 112.49, 83.3, 127.1, null, 74.24, 75.6, 66.66, 86.32, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 540.043, null, 544.345, 537.33, 507.324, 515.945, 524.969, 519.394, 562.707, 648.96, null, null, null, 573.5, 548.484, 589.635, 720.645, 840.944, 756.604, 813.538, 1032.157, 805.572, 765.911, 960.375, 750.655, 761.299, 747.455, 904.787, 777.751, 823.11, 601.5, 594.863, 584.18, 472.074, 577.459, 617.519, 478.278, 758.231, 469.495, 825.137, 826.808, 673.823, 546.277, 529.862 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 759.056, null, 735.417, 733.504, 772.548, 752.748, 788.172, 815.374, 818.07, 777.581, null, null, null, 942.814, 761.83, 857.868, 1220.052, 1097.243, 1036.697, 1102.231, 869.31, 848.943, 1807.76, 1432.361, 1156.114, 1180.207, 1148.224, 1023.179, 1261.865, 941.979, 1092.337, 803.245, 1380.229, 731.086, 941.612, 705.604, 668.921, 965.028, 671.651, 1100.204, 974.654, 708.57, 696.899, 934.325 ],
+                label: "arty-a100t-vpr-fasm2bels" ,
+                borderColor: "#8f10ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-ice40" ,
+                borderColor: "#33ff96",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 115.04, null, null, null, null, 125.68, 128.43, 120.74, 116.38, 202.8, 178.86, 190.65, 122.07, null, null, 192.41, 104.73, 171.6, 103.84, 112.36, 101.52, 122.77, 112.87, 86.81, 100.71, 173.06, 121.32, 188.53, null, 127.24, 85.94, 78.86, 102.92, null ],
+                label: "arty-a100t-yosys-vivado-uhdm" ,
+                borderColor: "#60ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 94.54, null, null, null, null, 86.28, 123.06, 123.64, 104.58, 119.4, 149.7, 139.82, 115.87, null, null, 137.02, 104.37, 109.32, 108.77, 142.65, 90.84, 118.67, 179.06, 150.08, 84.87, 95.52, 94.78, 118.5, null, 79.65, 94.52, 86.97, 92.48, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado" ,
+                borderColor: "#803eff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-ice40" ,
+                borderColor: "#08ff7d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado-uhdm" ,
+                borderColor: "#ff533f",
+                fill: false
+            },
+            {
+                data: [ null, null, 218.875, 221.899, 187.381, null, 185.349, 172.901, 193.609, 210.791, 194.767, 181.896, 207.157, 223.895, null, null, null, 226.354, 187.283, 207.919, 216.685, 258.041, 349.675, 263.77, 260.01, 481.855, 436.81, 428.05, 288.614, 243.829, 269.39, 491.988, 286.047, 305.064, 298.742, 231.46, 530.2, 203.035, 211.51, 383.494, 211.586, 384.975, 209.87, 334.292, 199.39, 196.745, 208.507, 416.412 ],
+                label: "arty-a35t-vpr" ,
+                borderColor: "#d50012",
+                fill: false
+            },
+    ] ,
+    false
+  );
+
+  charts.push(firstChart);
+  makeLegend(firstChart);
+
+  charts.push(newLineChart(
+    "frequency-chart",
+    "picorv32: actual frequency",
+    "MHz",
+    [ "2021-01-22 10:05:58", "2021-02-10 12:30:54", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 28.03, 27.97, 27.97, 27.97, 27.97, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, 28.03, null, null, 28.03, 28.03, 28.03, 28.03, 23.51, 23.18, 24.31, 23.72, 23.96, 23.18, 23.18, 24.23, 28.03, 23.9, 23.5, 23.9, 23.91, 23.84, 23.9 ],
+                label: "icebreaker-nextpnr-ice40" ,
+                borderColor: "#3572ff",
+                fill: false
+            },
+            {
+                data: [ 156.593, null, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, null, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, 156.593, null, 156.593, 156.593, 156.593, 156.593, 156.593 ],
+                label: "arty-a100t-vivado" ,
+                borderColor: "#00a461",
+                fill: false
+            },
+            {
+                data: [ 148.148, null, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, null, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, 148.148, null, 148.148, 148.148, 148.148, 148.148, 148.148 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 153.468, null, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, null, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, 153.468, null, 153.468, 153.468, 153.468, 153.468, 153.468 ],
+                label: "arty-a35t-vivado" ,
+                borderColor: "#ff2e81",
+                fill: false
+            },
+            {
+                data: [ 138.102, null, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, null, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, 138.102, null, 138.102, 138.102, 138.102, 138.102, 138.102 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 150.128, null, 150.128, 150.128, 150.128, 150.128, 150.128, 150.128, null, 150.128, 150.128, 150.128, 150.128, 150.128, 150.128, 150.128, 150.128, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, null, null, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, 131.961, null, 131.961, 131.961, 131.961, 131.961, 131.961 ],
+                label: "arty-a100t-yosys-vivado" ,
+                borderColor: "#007cb0",
+                fill: false
+            },
+            {
+                data: [ 146.757, null, 146.757, 146.757, 146.757, 146.757, 146.757, 146.757, null, 146.757, 146.757, 146.757, 146.757, 146.757, 146.757, 146.757, 146.757, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, null, null, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, 146.092, null, 146.092, 146.092, 146.092, 146.092, 146.092 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ 142.714, null, 142.714, 142.714, 142.714, 142.714, 142.714, 142.714, null, 142.714, 142.714, 142.714, 142.714, 142.714, 142.714, 142.714, 142.714, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, null, null, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, 136.687, null, 136.687, 136.687, 136.687, 136.687, 136.687 ],
+                label: "arty-a35t-yosys-vivado" ,
+                borderColor: "#00c531",
+                fill: false
+            },
+            {
+                data: [ 138.927, null, 138.927, 138.927, 138.927, 138.927, 138.927, 138.927, null, 138.927, 138.927, 138.927, 138.927, 138.927, 138.927, 138.927, 138.927, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, null, null, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, 143.041, null, 143.041, 143.041, 143.041, 143.041, 143.041 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-nextpnr-fpga-interchange" ,
+                borderColor: "#7b39ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 76.728, null, 76.728, 76.728, 76.728, 76.728, 76.728, 76.728, 76.728, 76.728, null, null, null, 78.143, 78.143, 78.143, 78.143, 78.143, 78.815, 78.815, 78.815, 78.815, 81.453, 78.815, 80.173, 78.815, 78.815, 77.646, 79.202, 81.347, 77.646, 77.646, 79.202, 81.347, 79.202, 79.202, 81.347, 81.347, 81.533, 79.202, 79.202, 81.347, 81.347, 79.202 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 12.0, 12.0, 12.0, 12.0, null, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, 83.514, 83.514, 83.514, null, 83.514, 83.514, 83.514, 86.919, 86.919, 86.919, 86.919, 83.963, null, null, null, 82.156, 80.476, 80.244, 80.244, 83.209, 81.913, 81.913, 81.913, 79.246, 77.58, 74.833, 76.365, 81.274, 81.274, 82.163, 78.505, 80.283, 81.853, 81.853, 82.59, 80.276, 80.167, 82.522, 81.566, 81.566, 81.559, 78.858, 81.833, 81.321, 81.321, 83.299 ],
+                label: "arty-a35t-vpr-fasm2bels" ,
+                borderColor: "#ffce0f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-fpga-interchange" ,
+                borderColor: "#09de00",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr" ,
+                borderColor: "#ff6733",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-ice40" ,
+                borderColor: "#ff13e1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-ice40" ,
+                borderColor: "#b1ff17",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 12.0, 12.0, 12.0, 12.0, null, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0 ],
+                label: "arty-a35t-nextpnr-fpga-interchange" ,
+                borderColor: "#42ffea",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vivado" ,
+                borderColor: "#de00cb",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 226.552, null, null, null, null, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, null, null, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, 226.552, null, 222.916, 222.916, 222.916, 226.552, null ],
+                label: "arty-a35t-yosys-vivado-uhdm" ,
+                borderColor: "#0061cf",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr-fasm2bels" ,
+                borderColor: "#3df6ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 79.781, null, 79.781, 79.781, 79.781, 77.984, 77.984, 77.984, 77.984, 84.211, null, null, null, 81.757, 80.97, 82.387, 82.387, 86.788, 85.34, 85.34, 85.34, 81.762, 82.085, 85.127, 84.72, 82.485, 82.485, 83.479, 80.777, 85.112, 82.585, 82.585, 82.928, 85.063, 82.443, 82.607, 84.174, 84.174, 83.442, 84.415, 82.999, 81.955, 81.955, 84.908 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 72.102, null, 72.102, 72.102, 72.102, 72.102, 72.102, 72.102, 72.102, 72.102, null, null, null, 79.652, 79.652, 79.652, 79.652, 79.652, 80.028, 80.028, 80.028, 80.028, 84.108, 80.028, 80.974, 80.028, 80.028, 79.556, 80.801, 81.274, 79.556, 79.556, 80.801, 81.274, 80.801, 80.801, 81.274, 81.274, 81.459, 80.801, 80.801, 81.274, 81.274, 80.801 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 81.556, null, 81.556, 81.556, 81.556, 80.873, 80.873, 80.873, 80.873, 81.967, null, null, null, 82.216, 80.264, 82.216, 82.216, 81.948, 81.535, 81.535, 81.535, 84.309, 81.991, 80.521, 81.991, 81.535, 81.535, 85.865, 82.839, 75.668, 82.93, 82.93, 79.736, 84.919, 83.594, 83.584, 83.616, 83.616, 79.736, 79.387, 87.503, 81.799, 81.799, 79.736 ],
+                label: "arty-a100t-vpr" ,
+                borderColor: "#eb00d2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 264.201, null, null, null, null, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, null, null, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, 264.201, null, 239.866, 239.866, 239.866, 264.201, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 82.926, null, 82.926, 82.926, 82.926, 82.25, 82.25, 82.25, 82.25, 87.535, null, null, null, 79.917, 79.195, 79.233, 79.233, 82.788, 82.217, 82.217, 82.217, 87.558, 82.617, 80.639, 81.679, 81.116, 81.116, 81.46, 77.652, 81.42, 87.612, 87.612, 81.347, 81.813, 81.606, 81.301, 81.606, 81.606, 81.533, 80.444, 87.758, 80.122, 80.122, 82.237 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 81.619, null, 81.619, 81.619, 81.619, 85.485, 85.485, 85.485, 85.485, 82.706, null, null, null, 83.417, 84.998, 83.417, 83.417, 80.496, 79.847, 79.847, 79.847, 81.82, 79.732, 82.25, 79.732, 79.847, 79.847, 82.61, 79.745, 75.643, 78.927, 78.927, 77.851, 82.699, 79.151, 79.145, 81.619, 81.619, 77.851, 81.255, 86.941, 79.821, 79.821, 77.851 ],
+                label: "arty-a100t-vpr-fasm2bels" ,
+                borderColor: "#8f10ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-ice40" ,
+                borderColor: "#33ff96",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 242.189, null, null, null, null, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, null, null, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, 242.189, null, 217.439, 217.439, 217.439, 242.189, null ],
+                label: "arty-a100t-yosys-vivado-uhdm" ,
+                borderColor: "#60ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 256.937, null, null, null, null, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, null, null, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, 256.937, null, 247.647, 247.647, 247.647, 256.937, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado" ,
+                borderColor: "#803eff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-ice40" ,
+                borderColor: "#08ff7d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado-uhdm" ,
+                borderColor: "#ff533f",
+                fill: false
+            },
+            {
+                data: [ null, null, 80.04, 80.04, 80.04, null, 80.04, 80.04, 80.04, 81.714, 81.714, 81.714, 81.714, 81.239, null, null, null, 83.596, 82.618, 84.068, 84.068, 83.485, 85.488, 85.488, 85.488, 80.16, 81.596, 78.364, 79.553, 84.796, 84.796, 79.393, 80.814, 85.773, 82.692, 82.692, 82.083, 86.027, 85.119, 86.516, 79.252, 79.252, 79.078, 82.194, 82.776, 85.542, 85.542, 85.832 ],
+                label: "arty-a35t-vpr" ,
+                borderColor: "#d50012",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  charts.push(newLineChart(
+    "LUT-chart",
+    "picorv32: total LUT count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-10 12:30:54", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, null, null, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2388, 2322, 2322, 2322, 2322, 2388, 2322 ],
+                label: "icebreaker-nextpnr-ice40" ,
+                borderColor: "#3572ff",
+                fill: false
+            },
+            {
+                data: [ 1157, null, 1157, 1157, 1157, 1157, 1157, 1157, null, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, null, 1157, 1157, 1157, 1157, 1157 ],
+                label: "arty-a100t-vivado" ,
+                borderColor: "#00a461",
+                fill: false
+            },
+            {
+                data: [ 1157, null, 1157, 1157, 1157, 1157, 1157, 1157, null, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, null, 1157, 1157, 1157, 1157, 1157 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 1157, null, 1157, 1157, 1157, 1157, 1157, 1157, null, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, null, 1157, 1157, 1157, 1157, 1157 ],
+                label: "arty-a35t-vivado" ,
+                borderColor: "#ff2e81",
+                fill: false
+            },
+            {
+                data: [ 1157, null, 1157, 1157, 1157, 1157, 1157, 1157, null, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, 1157, null, 1157, 1157, 1157, 1157, 1157 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 1486, null, 1486, 1486, 1486, 1486, 1486, 1486, null, 1486, 1486, 1486, 1486, 1486, 1486, 1486, 1486, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, null, null, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, null, 1475, 1475, 1475, 1475, 1475 ],
+                label: "arty-a100t-yosys-vivado" ,
+                borderColor: "#007cb0",
+                fill: false
+            },
+            {
+                data: [ 1486, null, 1486, 1486, 1486, 1486, 1486, 1486, null, 1486, 1486, 1486, 1486, 1486, 1486, 1486, 1486, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, null, null, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, null, 1475, 1475, 1475, 1475, 1475 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ 1486, null, 1486, 1486, 1486, 1486, 1486, 1486, null, 1486, 1486, 1486, 1486, 1486, 1486, 1486, 1486, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, null, null, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, null, 1475, 1475, 1475, 1475, 1475 ],
+                label: "arty-a35t-yosys-vivado" ,
+                borderColor: "#00c531",
+                fill: false
+            },
+            {
+                data: [ 1486, null, 1486, 1486, 1486, 1486, 1486, 1486, null, 1486, 1486, 1486, 1486, 1486, 1486, 1486, 1486, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, null, null, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, 1475, null, 1475, 1475, 1475, 1475, 1475 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-nextpnr-fpga-interchange" ,
+                borderColor: "#7b39ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1331, null, 1331, 1331, 1331, 1331, 1331, 1331, 1331, 1331, null, null, null, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 2249, 2249, 2249, 2249, null, 2249, 2249, 2249, 2249, 2249, 2249 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, 1331, 1331, 1331, null, 1331, 1331, 1331, 1331, 1331, 1331, 1331, 1331, null, null, null, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346 ],
+                label: "arty-a35t-vpr-fasm2bels" ,
+                borderColor: "#ffce0f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-fpga-interchange" ,
+                borderColor: "#09de00",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr" ,
+                borderColor: "#ff6733",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-ice40" ,
+                borderColor: "#ff13e1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-ice40" ,
+                borderColor: "#b1ff17",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 2249, 2249, 2249, 2249, null, 2249, 2249, 2249, 2249, 2249, 2249 ],
+                label: "arty-a35t-nextpnr-fpga-interchange" ,
+                borderColor: "#42ffea",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vivado" ,
+                borderColor: "#de00cb",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 477, null, null, null, null, 477, 477, 477, 477, 477, 477, 477, 477, null, null, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, null, 333, 333, 333, 477, null ],
+                label: "arty-a35t-yosys-vivado-uhdm" ,
+                borderColor: "#0061cf",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr-fasm2bels" ,
+                borderColor: "#3df6ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1331, null, 1331, 1331, 1331, 1331, 1331, 1331, 1331, 1331, null, null, null, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1331, null, 1331, 1331, 1331, 1331, 1331, 1331, 1331, 1331, null, null, null, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1331, null, 1331, 1331, 1331, 1331, 1331, 1331, 1331, 1331, null, null, null, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346 ],
+                label: "arty-a100t-vpr" ,
+                borderColor: "#eb00d2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 477, null, null, null, null, 477, 477, 477, 477, 477, 477, 477, 477, null, null, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, null, 333, 333, 333, 477, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1331, null, 1331, 1331, 1331, 1331, 1331, 1331, 1331, 1331, null, null, null, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1331, null, 1331, 1331, 1331, 1331, 1331, 1331, 1331, 1331, null, null, null, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346 ],
+                label: "arty-a100t-vpr-fasm2bels" ,
+                borderColor: "#8f10ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-ice40" ,
+                borderColor: "#33ff96",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 477, null, null, null, null, 477, 477, 477, 477, 477, 477, 477, 477, null, null, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, null, 333, 333, 333, 477, null ],
+                label: "arty-a100t-yosys-vivado-uhdm" ,
+                borderColor: "#60ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 477, null, null, null, null, 477, 477, 477, 477, 477, 477, 477, 477, null, null, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, 477, null, 333, 333, 333, 477, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado" ,
+                borderColor: "#803eff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-ice40" ,
+                borderColor: "#08ff7d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado-uhdm" ,
+                borderColor: "#ff533f",
+                fill: false
+            },
+            {
+                data: [ null, null, 1331, 1331, 1331, null, 1331, 1331, 1331, 1331, 1331, 1331, 1331, 1331, null, null, null, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346, 1346 ],
+                label: "arty-a35t-vpr" ,
+                borderColor: "#d50012",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "DFF-chart",
+    "picorv32: total DFF count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-10 12:30:54", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, null, null, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038, 1038 ],
+                label: "icebreaker-nextpnr-ice40" ,
+                borderColor: "#3572ff",
+                fill: false
+            },
+            {
+                data: [ 920, null, 920, 920, 920, 920, 920, 920, null, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, null, 920, 920, 920, 920, 920 ],
+                label: "arty-a100t-vivado" ,
+                borderColor: "#00a461",
+                fill: false
+            },
+            {
+                data: [ 920, null, 920, 920, 920, 920, 920, 920, null, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, null, 920, 920, 920, 920, 920 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 920, null, 920, 920, 920, 920, 920, 920, null, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, null, 920, 920, 920, 920, 920 ],
+                label: "arty-a35t-vivado" ,
+                borderColor: "#ff2e81",
+                fill: false
+            },
+            {
+                data: [ 920, null, 920, 920, 920, 920, 920, 920, null, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, 920, null, 920, 920, 920, 920, 920 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 879, null, 879, 879, 879, 879, 879, 879, null, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, null, null, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, null, 879, 879, 879, 879, 879 ],
+                label: "arty-a100t-yosys-vivado" ,
+                borderColor: "#007cb0",
+                fill: false
+            },
+            {
+                data: [ 879, null, 879, 879, 879, 879, 879, 879, null, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, null, null, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, null, 879, 879, 879, 879, 879 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ 879, null, 879, 879, 879, 879, 879, 879, null, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, null, null, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, null, 879, 879, 879, 879, 879 ],
+                label: "arty-a35t-yosys-vivado" ,
+                borderColor: "#00c531",
+                fill: false
+            },
+            {
+                data: [ 879, null, 879, 879, 879, 879, 879, 879, null, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, null, null, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, 879, null, 879, 879, 879, 879, 879 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-nextpnr-fpga-interchange" ,
+                borderColor: "#7b39ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1015, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, null, null, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 2038, 2038, 2038, 2038, null, 2038, 2038, 2038, 2038, 2038, 2038 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, 1015, 1015, 1015, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, null, null, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015 ],
+                label: "arty-a35t-vpr-fasm2bels" ,
+                borderColor: "#ffce0f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-fpga-interchange" ,
+                borderColor: "#09de00",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr" ,
+                borderColor: "#ff6733",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-ice40" ,
+                borderColor: "#ff13e1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-ice40" ,
+                borderColor: "#b1ff17",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 2038, 2038, 2038, 2038, null, 2038, 2038, 2038, 2038, 2038, 2038 ],
+                label: "arty-a35t-nextpnr-fpga-interchange" ,
+                borderColor: "#42ffea",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vivado" ,
+                borderColor: "#de00cb",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 537, null, null, null, null, 537, 537, 537, 537, 537, 537, 537, 537, null, null, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, null, 403, 403, 403, 537, null ],
+                label: "arty-a35t-yosys-vivado-uhdm" ,
+                borderColor: "#0061cf",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr-fasm2bels" ,
+                borderColor: "#3df6ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1015, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, null, null, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1015, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, null, null, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1015, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, null, null, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015 ],
+                label: "arty-a100t-vpr" ,
+                borderColor: "#eb00d2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 537, null, null, null, null, 537, 537, 537, 537, 537, 537, 537, 537, null, null, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, null, 403, 403, 403, 537, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1015, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, null, null, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 1015, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, null, null, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015 ],
+                label: "arty-a100t-vpr-fasm2bels" ,
+                borderColor: "#8f10ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-ice40" ,
+                borderColor: "#33ff96",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 537, null, null, null, null, 537, 537, 537, 537, 537, 537, 537, 537, null, null, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, null, 403, 403, 403, 537, null ],
+                label: "arty-a100t-yosys-vivado-uhdm" ,
+                borderColor: "#60ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 537, null, null, null, null, 537, 537, 537, 537, 537, 537, 537, 537, null, null, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, 537, null, 403, 403, 403, 537, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado" ,
+                borderColor: "#803eff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-ice40" ,
+                borderColor: "#08ff7d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado-uhdm" ,
+                borderColor: "#ff533f",
+                fill: false
+            },
+            {
+                data: [ null, null, 1015, 1015, 1015, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, null, null, null, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015 ],
+                label: "arty-a35t-vpr" ,
+                borderColor: "#d50012",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "CARRY-chart",
+    "picorv32: total CARRY count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-10 12:30:54", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, null, null, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 349, 345, 345, 345, 345, 349, 345 ],
+                label: "icebreaker-nextpnr-ice40" ,
+                borderColor: "#3572ff",
+                fill: false
+            },
+            {
+                data: [ 83, null, 83, 83, 83, 83, 83, 83, null, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, null, 83, 83, 83, 83, 83 ],
+                label: "arty-a100t-vivado" ,
+                borderColor: "#00a461",
+                fill: false
+            },
+            {
+                data: [ 83, null, 83, 83, 83, 83, 83, 83, null, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, null, 83, 83, 83, 83, 83 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 83, null, 83, 83, 83, 83, 83, 83, null, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, null, 83, 83, 83, 83, 83 ],
+                label: "arty-a35t-vivado" ,
+                borderColor: "#ff2e81",
+                fill: false
+            },
+            {
+                data: [ 83, null, 83, 83, 83, 83, 83, 83, null, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, 83, null, 83, 83, 83, 83, 83 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 97, null, 97, 97, 97, 97, 97, 97, null, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, null, null, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, null, 97, 97, 97, 97, 97 ],
+                label: "arty-a100t-yosys-vivado" ,
+                borderColor: "#007cb0",
+                fill: false
+            },
+            {
+                data: [ 97, null, 97, 97, 97, 97, 97, 97, null, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, null, null, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, null, 97, 97, 97, 97, 97 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ 97, null, 97, 97, 97, 97, 97, 97, null, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, null, null, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, null, 97, 97, 97, 97, 97 ],
+                label: "arty-a35t-yosys-vivado" ,
+                borderColor: "#00c531",
+                fill: false
+            },
+            {
+                data: [ 97, null, 97, 97, 97, 97, 97, 97, null, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, null, null, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, 97, null, 97, 97, 97, 97, 97 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-nextpnr-fpga-interchange" ,
+                borderColor: "#7b39ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 96, null, 96, 96, 96, 96, 96, 96, 96, 96, null, null, null, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 97, 97, 97, 97, null, 97, 97, 97, 97, 97, 97 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, 96, 96, 96, null, 96, 96, 96, 96, 96, 96, 96, 96, null, null, null, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96 ],
+                label: "arty-a35t-vpr-fasm2bels" ,
+                borderColor: "#ffce0f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-fpga-interchange" ,
+                borderColor: "#09de00",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr" ,
+                borderColor: "#ff6733",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-ice40" ,
+                borderColor: "#ff13e1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-ice40" ,
+                borderColor: "#b1ff17",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 97, 97, 97, 97, null, 97, 97, 97, 97, 97, 97 ],
+                label: "arty-a35t-nextpnr-fpga-interchange" ,
+                borderColor: "#42ffea",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vivado" ,
+                borderColor: "#de00cb",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 3, null, null, null, null, 3, 3, 3, 3, 3, 3, 3, 3, null, null, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, null, 3, 3, 3, 3, null ],
+                label: "arty-a35t-yosys-vivado-uhdm" ,
+                borderColor: "#0061cf",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr-fasm2bels" ,
+                borderColor: "#3df6ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 96, null, 96, 96, 96, 96, 96, 96, 96, 96, null, null, null, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 96, null, 96, 96, 96, 96, 96, 96, 96, 96, null, null, null, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 96, null, 96, 96, 96, 96, 96, 96, 96, 96, null, null, null, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96 ],
+                label: "arty-a100t-vpr" ,
+                borderColor: "#eb00d2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 3, null, null, null, null, 3, 3, 3, 3, 3, 3, 3, 3, null, null, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, null, 3, 3, 3, 3, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 96, null, 96, 96, 96, 96, 96, 96, 96, 96, null, null, null, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 96, null, 96, 96, 96, 96, 96, 96, 96, 96, null, null, null, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96 ],
+                label: "arty-a100t-vpr-fasm2bels" ,
+                borderColor: "#8f10ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-ice40" ,
+                borderColor: "#33ff96",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 3, null, null, null, null, 3, 3, 3, 3, 3, 3, 3, 3, null, null, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, null, 3, 3, 3, 3, null ],
+                label: "arty-a100t-yosys-vivado-uhdm" ,
+                borderColor: "#60ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 3, null, null, null, null, 3, 3, 3, 3, 3, 3, 3, 3, null, null, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, null, 3, 3, 3, 3, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado" ,
+                borderColor: "#803eff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-ice40" ,
+                borderColor: "#08ff7d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado-uhdm" ,
+                borderColor: "#ff533f",
+                fill: false
+            },
+            {
+                data: [ null, null, 96, 96, 96, null, 96, 96, 96, 96, 96, 96, 96, 96, null, null, null, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96 ],
+                label: "arty-a35t-vpr" ,
+                borderColor: "#d50012",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "IOB-chart",
+    "picorv32: total IOB count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-10 12:30:54", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ],
+                label: "icebreaker-nextpnr-ice40" ,
+                borderColor: "#3572ff",
+                fill: false
+            },
+            {
+                data: [ 4, null, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "arty-a100t-vivado" ,
+                borderColor: "#00a461",
+                fill: false
+            },
+            {
+                data: [ 4, null, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 4, null, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "arty-a35t-vivado" ,
+                borderColor: "#ff2e81",
+                fill: false
+            },
+            {
+                data: [ 4, null, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 4, null, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "arty-a100t-yosys-vivado" ,
+                borderColor: "#007cb0",
+                fill: false
+            },
+            {
+                data: [ 4, null, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ 4, null, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "arty-a35t-yosys-vivado" ,
+                borderColor: "#00c531",
+                fill: false
+            },
+            {
+                data: [ 4, null, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-nextpnr-fpga-interchange" ,
+                borderColor: "#7b39ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ],
+                label: "arty-a35t-vpr-fasm2bels" ,
+                borderColor: "#ffce0f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-fpga-interchange" ,
+                borderColor: "#09de00",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr" ,
+                borderColor: "#ff6733",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-ice40" ,
+                borderColor: "#ff13e1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-ice40" ,
+                borderColor: "#b1ff17",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4 ],
+                label: "arty-a35t-nextpnr-fpga-interchange" ,
+                borderColor: "#42ffea",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vivado" ,
+                borderColor: "#de00cb",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 4, null, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, null ],
+                label: "arty-a35t-yosys-vivado-uhdm" ,
+                borderColor: "#0061cf",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr-fasm2bels" ,
+                borderColor: "#3df6ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ],
+                label: "arty-a100t-vpr" ,
+                borderColor: "#eb00d2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 4, null, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ],
+                label: "arty-a100t-vpr-fasm2bels" ,
+                borderColor: "#8f10ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-ice40" ,
+                borderColor: "#33ff96",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 4, null, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, null ],
+                label: "arty-a100t-yosys-vivado-uhdm" ,
+                borderColor: "#60ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 4, null, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado" ,
+                borderColor: "#803eff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-ice40" ,
+                borderColor: "#08ff7d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado-uhdm" ,
+                borderColor: "#ff533f",
+                fill: false
+            },
+            {
+                data: [ null, null, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, null, null, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 ],
+                label: "arty-a35t-vpr" ,
+                borderColor: "#d50012",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "BRAM-chart",
+    "picorv32: total BRAM count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-10 12:30:54", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, null, null, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 5, 6, 5, 5, 6 ],
+                label: "icebreaker-nextpnr-ice40" ,
+                borderColor: "#3572ff",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "arty-a100t-vivado" ,
+                borderColor: "#00a461",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-vivado" ,
+                borderColor: "#ff2e81",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "arty-a100t-yosys-vivado" ,
+                borderColor: "#007cb0",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-yosys-vivado" ,
+                borderColor: "#00c531",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-nextpnr-fpga-interchange" ,
+                borderColor: "#7b39ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-vpr-fasm2bels" ,
+                borderColor: "#ffce0f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-fpga-interchange" ,
+                borderColor: "#09de00",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr" ,
+                borderColor: "#ff6733",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-ice40" ,
+                borderColor: "#ff13e1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-ice40" ,
+                borderColor: "#b1ff17",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-nextpnr-fpga-interchange" ,
+                borderColor: "#42ffea",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vivado" ,
+                borderColor: "#de00cb",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null ],
+                label: "arty-a35t-yosys-vivado-uhdm" ,
+                borderColor: "#0061cf",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr-fasm2bels" ,
+                borderColor: "#3df6ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a100t-vpr" ,
+                borderColor: "#eb00d2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a100t-vpr-fasm2bels" ,
+                borderColor: "#8f10ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-ice40" ,
+                borderColor: "#33ff96",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null ],
+                label: "arty-a100t-yosys-vivado-uhdm" ,
+                borderColor: "#60ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado" ,
+                borderColor: "#803eff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-ice40" ,
+                borderColor: "#08ff7d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado-uhdm" ,
+                borderColor: "#ff533f",
+                fill: false
+            },
+            {
+                data: [ null, null, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-vpr" ,
+                borderColor: "#d50012",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "PLL-chart",
+    "picorv32: total PLL count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-10 12:30:54", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "icebreaker-nextpnr-ice40" ,
+                borderColor: "#3572ff",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "arty-a100t-vivado" ,
+                borderColor: "#00a461",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-vivado" ,
+                borderColor: "#ff2e81",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "arty-a100t-yosys-vivado" ,
+                borderColor: "#007cb0",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-yosys-vivado" ,
+                borderColor: "#00c531",
+                fill: false
+            },
+            {
+                data: [ 0, null, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-nextpnr-fpga-interchange" ,
+                borderColor: "#7b39ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-vpr-fasm2bels" ,
+                borderColor: "#ffce0f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-fpga-interchange" ,
+                borderColor: "#09de00",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr" ,
+                borderColor: "#ff6733",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-ice40" ,
+                borderColor: "#ff13e1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-ice40" ,
+                borderColor: "#b1ff17",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-nextpnr-fpga-interchange" ,
+                borderColor: "#42ffea",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vivado" ,
+                borderColor: "#de00cb",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null ],
+                label: "arty-a35t-yosys-vivado-uhdm" ,
+                borderColor: "#0061cf",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr-fasm2bels" ,
+                borderColor: "#3df6ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a100t-vpr" ,
+                borderColor: "#eb00d2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a100t-vpr-fasm2bels" ,
+                borderColor: "#8f10ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-ice40" ,
+                borderColor: "#33ff96",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null ],
+                label: "arty-a100t-yosys-vivado-uhdm" ,
+                borderColor: "#60ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado" ,
+                borderColor: "#803eff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-ice40" ,
+                borderColor: "#08ff7d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado-uhdm" ,
+                borderColor: "#ff533f",
+                fill: false
+            },
+            {
+                data: [ null, null, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "arty-a35t-vpr" ,
+                borderColor: "#d50012",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "GLB-chart",
+    "picorv32: total GLB count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-10 12:30:54", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, null, null, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 ],
+                label: "icebreaker-nextpnr-ice40" ,
+                borderColor: "#3572ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-vivado" ,
+                borderColor: "#00a461",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-vivado" ,
+                borderColor: "#ff2e81",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-yosys-vivado" ,
+                borderColor: "#007cb0",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-yosys-vivado" ,
+                borderColor: "#00c531",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-nextpnr-fpga-interchange" ,
+                borderColor: "#7b39ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-vpr-fasm2bels" ,
+                borderColor: "#ffce0f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-fpga-interchange" ,
+                borderColor: "#09de00",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr" ,
+                borderColor: "#ff6733",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-nextpnr-ice40" ,
+                borderColor: "#ff13e1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-ice40" ,
+                borderColor: "#b1ff17",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-nextpnr-fpga-interchange" ,
+                borderColor: "#42ffea",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vivado" ,
+                borderColor: "#de00cb",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-yosys-vivado-uhdm" ,
+                borderColor: "#0061cf",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-vpr-fasm2bels" ,
+                borderColor: "#3df6ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-vpr" ,
+                borderColor: "#eb00d2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-vpr-fasm2bels" ,
+                borderColor: "#8f10ff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-ice40" ,
+                borderColor: "#33ff96",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a100t-yosys-vivado-uhdm" ,
+                borderColor: "#60ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado" ,
+                borderColor: "#803eff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-ice40" ,
+                borderColor: "#08ff7d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "icebreaker-yosys-vivado-uhdm" ,
+                borderColor: "#ff533f",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "arty-a35t-vpr" ,
+                borderColor: "#d50012",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>FPGA tool perf results: project iir</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.0/dist/chart.min.js"></script>
+</head>
+<style>
+  #resource-graphs{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  #resource-graphs div {
+    width: 31vw;
+    max-width: 31vw;
+    max-height: 50vh;
+    margin: 1vh 1vw 1vw 1vh;
+  }
+  #topbar-legend {
+    max-height: 4em;
+    background-color: lightgrey;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+  }
+  #topbar-legend-flex {
+    display: flex;
+    flex-direction: row;
+  }
+  .topbar-legend-item {
+    margin: 0.1em 0.5em 0.5em 0.5em;
+  }
+  .topbar-legend-item div p {
+    margin-top: 0.5em;
+    margin-bottom: 0.1em;
+    font-size: 0.7em;
+    cursor: pointer;
+  }
+  .topbar-legend-color-indicator {
+    height: 0.5em;
+  }
+  .crosslined {
+    text-decoration: line-through;
+  }
+</style>
+
+<body>
+  <div id="topbar-platforms">
+    <select>
+      <option value="<all_configs>">(all configurations)</option>
+        <option value="chandalar">chandalar</option>
+        <option value="quickfeather">quickfeather</option>
+    </select>
+  </div>
+  <div id="topbar-legend">
+    <div id="topbar-legend-flex">
+      <p>XD</p>
+    </div>
+  </div>
+
+  <canvas id="runtime-chart" width="300" height="150"></canvas>
+  <canvas id="frequency-chart", width="300" height="150"></canvas>
+  <div id="resource-graphs">
+    <div>
+      <canvas id="LUT-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="DFF-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="CARRY-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="IOB-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="BRAM-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="PLL-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="GLB-chart"></canvas>
+    </div>
+  </div>
+
+  <script>
+
+  let charts = [];
+
+  let dataset_sets = {
+    
+  }
+
+  function createLegendEntry(idx, name, color) {
+    return "<div class=\"topbar-legend-item\"><div><p id=\"topbar-legend-item-" +
+           idx + "\"onClick=\"toggleDataset(" + idx + ")\">" + name + "</p>" +
+           "</div><div style=\"background-color: " + color + ";\" " +
+           "class=\"topbar-legend-color-indicator\"></div></div>";
+  }
+
+  function makeLegend(chart) {
+    html_code = ""
+    ds_cnt = chart.data.datasets.length;
+    for (let i = 0; i < ds_cnt; i++) {
+      dataset = chart.data.datasets[i];
+      html_code += createLegendEntry(i, dataset.label, dataset.borderColor);
+    }
+
+    document.getElementById("topbar-legend-flex").innerHTML = html_code
+  }
+
+  function setDatasetVisible(idx, visibility) {
+    for (let i = 0; i < charts.length; i++) {
+      chart = charts[i];
+      chart.getDatasetMeta(idx).hidden = !visibility;
+      chart.update();
+    }
+  }
+
+  function onLegendClicked(event, legendItem, legend) {
+    idx = legendItem.datasetIndex
+    visibility = legendItem.hidden
+    setDatasetVisible(idx, visibility)
+  }
+
+  function toggleDataset(idx) {
+    for (let i = 0; i < charts.length; i++) {
+      chart = charts[i];
+      chart.getDatasetMeta(idx).hidden = !chart.getDatasetMeta(idx).hidden;
+      chart.update();
+    }
+
+    button = document.getElementById("topbar-legend-item-" + idx)
+    
+    if (charts[0].getDatasetMeta(idx).hidden)
+      button.className = "crosslined"
+    else
+      button.className = ""
+  }
+
+  function newLineChart(canvas_name, title, unitstr, labels, datasets, legend) {
+    return new Chart(document.getElementById(canvas_name), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
+      },
+      options: {
+        spanGaps: true,
+        plugins: {
+          title: {
+            display: true,
+            text: title
+          },
+          legend: {
+            display: legend,
+            onClick: onLegendClicked
+          }
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback: function(v, idx, vx) {
+                return v + unitstr;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  let firstChart = newLineChart(
+    "runtime-chart",
+    "iir: total runtime",
+    "s",
+    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 1068.703, 1072.981, 878.084, 865.196, 1195.54, 533.669, 634.538, 944.496, 615.157, 872.338, 618.457, 704.634, 971.168 ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ 1397.431, 1163.882, 733.398, 1082.153, 770.368, 658.425, 659.841, 846.784, 700.524, 648.095, 697.741, 847.968, 727.587 ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  );
+
+  charts.push(firstChart);
+  makeLegend(firstChart);
+
+  charts.push(newLineChart(
+    "frequency-chart",
+    "iir: actual frequency",
+    "MHz",
+    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314 ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314 ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  charts.push(newLineChart(
+    "LUT-chart",
+    "iir: total LUT count",
+    "",
+    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "DFF-chart",
+    "iir: total DFF count",
+    "",
+    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "CARRY-chart",
+    "iir: total CARRY count",
+    "",
+    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "IOB-chart",
+    "iir: total IOB count",
+    "",
+    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38 ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38 ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "BRAM-chart",
+    "iir: total BRAM count",
+    "",
+    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "PLL-chart",
+    "iir: total PLL count",
+    "",
+    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "GLB-chart",
+    "iir: total GLB count",
+    "",
+    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  </script>
+</body>
+</html>

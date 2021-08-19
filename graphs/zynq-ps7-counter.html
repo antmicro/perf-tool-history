@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>FPGA tool perf results: project zynq-ps7-counter</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.0/dist/chart.min.js"></script>
+</head>
+<style>
+  #resource-graphs{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  #resource-graphs div {
+    width: 31vw;
+    max-width: 31vw;
+    max-height: 50vh;
+    margin: 1vh 1vw 1vw 1vh;
+  }
+  #topbar-legend {
+    max-height: 4em;
+    background-color: lightgrey;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+  }
+  #topbar-legend-flex {
+    display: flex;
+    flex-direction: row;
+  }
+  .topbar-legend-item {
+    margin: 0.1em 0.5em 0.5em 0.5em;
+  }
+  .topbar-legend-item div p {
+    margin-top: 0.5em;
+    margin-bottom: 0.1em;
+    font-size: 0.7em;
+    cursor: pointer;
+  }
+  .topbar-legend-color-indicator {
+    height: 0.5em;
+  }
+  .crosslined {
+    text-decoration: line-through;
+  }
+</style>
+
+<body>
+  <div id="topbar-platforms">
+    <select>
+      <option value="<all_configs>">(all configurations)</option>
+        <option value="zybo">zybo</option>
+    </select>
+  </div>
+  <div id="topbar-legend">
+    <div id="topbar-legend-flex">
+      <p>XD</p>
+    </div>
+  </div>
+
+  <canvas id="runtime-chart" width="300" height="150"></canvas>
+  <canvas id="frequency-chart", width="300" height="150"></canvas>
+  <div id="resource-graphs">
+    <div>
+      <canvas id="LUT-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="DFF-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="CARRY-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="IOB-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="BRAM-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="PLL-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="GLB-chart"></canvas>
+    </div>
+  </div>
+
+  <script>
+
+  let charts = [];
+
+  let dataset_sets = {
+    
+  }
+
+  function createLegendEntry(idx, name, color) {
+    return "<div class=\"topbar-legend-item\"><div><p id=\"topbar-legend-item-" +
+           idx + "\"onClick=\"toggleDataset(" + idx + ")\">" + name + "</p>" +
+           "</div><div style=\"background-color: " + color + ";\" " +
+           "class=\"topbar-legend-color-indicator\"></div></div>";
+  }
+
+  function makeLegend(chart) {
+    html_code = ""
+    ds_cnt = chart.data.datasets.length;
+    for (let i = 0; i < ds_cnt; i++) {
+      dataset = chart.data.datasets[i];
+      html_code += createLegendEntry(i, dataset.label, dataset.borderColor);
+    }
+
+    document.getElementById("topbar-legend-flex").innerHTML = html_code
+  }
+
+  function setDatasetVisible(idx, visibility) {
+    for (let i = 0; i < charts.length; i++) {
+      chart = charts[i];
+      chart.getDatasetMeta(idx).hidden = !visibility;
+      chart.update();
+    }
+  }
+
+  function onLegendClicked(event, legendItem, legend) {
+    idx = legendItem.datasetIndex
+    visibility = legendItem.hidden
+    setDatasetVisible(idx, visibility)
+  }
+
+  function toggleDataset(idx) {
+    for (let i = 0; i < charts.length; i++) {
+      chart = charts[i];
+      chart.getDatasetMeta(idx).hidden = !chart.getDatasetMeta(idx).hidden;
+      chart.update();
+    }
+
+    button = document.getElementById("topbar-legend-item-" + idx)
+    
+    if (charts[0].getDatasetMeta(idx).hidden)
+      button.className = "crosslined"
+    else
+      button.className = ""
+  }
+
+  function newLineChart(canvas_name, title, unitstr, labels, datasets, legend) {
+    return new Chart(document.getElementById(canvas_name), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
+      },
+      options: {
+        spanGaps: true,
+        plugins: {
+          title: {
+            display: true,
+            text: title
+          },
+          legend: {
+            display: legend,
+            onClick: onLegendClicked
+          }
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback: function(v, idx, vx) {
+                return v + unitstr;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  let firstChart = newLineChart(
+    "runtime-chart",
+    "zynq-ps7-counter: total runtime",
+    "s",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 155.069, 219.823, 175.961, 165.835, 180.228, 160.393, 164.793, null, 154.892, 146.016, 144.002, 176.729, 167.124, 171.519, 175.7, 169.806, 141.087, 157.249, 157.98, 176.929, 198.397, 260.519, 316.483, 338.424, 197.309, 258.362, 326.414, 255.991, 253.418, 278.092, 336.513, 172.967, 262.397, 138.259, 293.356, 171.653, 158.513, 145.175, 172.323, 228.698, 241.423, null, 113.319, 151.404, 116.301, 255.33, 168.583 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 72.54, 66.79, 80.33, 61.15, 60.14, 54.76, 54.46, null, 49.66, 49.14, 56.41, 68.44, 59.23, 54.02, 61.95, 53.4, 89.14, 67.61, 52.24, 64.42, 69.83, 109.61, 122.8, 68.68, 74.82, 85.14, null, null, 83.65, 67.52, 101.74, 99.44, 67.62, 56.72, 55.66, 56.59, 52.39, 58.54, 58.1, 54.56, 54.48, null, 81.31, 44.52, 47.42, 55.64, 85.69 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 462.979, null, 439.5, 444.324, 456.109, 427.461, 699.746, 456.822, 739.892, 521.539, null, null, null, 605.879, 501.906, 458.158, 793.666, 1191.968, 507.764, 617.544, 703.674, 803.921, 719.933, 588.478, 640.182, 557.484, 572.139, 854.919, 620.879, 647.094, 534.123, 985.273, 862.414, 674.255, 1052.307, 601.802, 484.079, 1192.232, 448.023, 467.516, 555.167, 511.169, 485.539, 565.409 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 558.904, null, 647.622, 658.842, 669.513, 628.801, 933.899, 607.689, 925.017, 690.835, null, null, null, 687.647, 694.654, 629.322, 801.116, 1145.571, 827.093, 1278.209, 1324.422, 1317.559, 974.965, 847.477, 791.871, 1295.17, 1127.962, 869.335, 926.562, 818.105, 818.307, 923.934, 1140.03, 626.657, 601.575, 770.07, 698.242, 1358.701, 594.902, 700.838, 817.257, 644.062, 813.026, 998.853 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 61.88, 70.18, 60.92, null, 57.8 ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 43.278, 36.251, 64.463, 34.624, null, 35.765, 43.127, 35.967, 52.986, 36.505, 36.579 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, 287.856, 288.584, null, null, null, 245.035, 265.602, 257.346, 271.451, 244.383, 274.611, 299.203, null, null, null, 374.941, 289.031, 262.074, 329.978, 500.772, null, null, 361.198, 521.389, null, null, null, null, null, null, null, 29.824, 14.625, 17.801, 31.908, 10.087, 11.408, 21.582, 11.094, null, 18.136, 33.29, 11.409, 17.169, 15.034, 13.157 ],
+                label: "zybo-nextpnr-xilinx" ,
+                borderColor: "#68ff40",
+                fill: false
+            },
+            {
+                data: [ null, 517.111, 521.688, null, null, null, 416.901, 425.46, 421.22, 431.95, 431.085, 460.976, 488.848, null, null, null, 566.724, 425.242, 420.874, 473.291, 812.178, null, null, 700.886, 780.761, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#3dff94",
+                fill: false
+            },
+    ] ,
+    false
+  );
+
+  charts.push(firstChart);
+  makeLegend(firstChart);
+
+  charts.push(newLineChart(
+    "frequency-chart",
+    "zynq-ps7-counter: actual frequency",
+    "MHz",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, null, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, 371.885, null, 371.885, 371.885, 371.885, 371.885, 371.885 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, null, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, null, null, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, 276.855, null, 276.855, 276.855, 276.855, 276.855, 276.855 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 191.115, null, 191.115, 191.115, 191.115, 191.115, 191.115, 191.115, 191.115, 191.115, null, null, null, 190.78, 190.78, 190.78, 190.78, 190.78, 191.115, 191.115, 191.115, 191.115, 207.445, 191.115, 191.115, 191.115, 191.115, 191.115, 191.115, 207.445, 191.115, 191.115, 191.115, 207.445, 191.115, 191.115, 207.445, 207.445, 207.445, 191.115, 191.115, 207.445, 207.445, 191.115 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 187.793, null, 187.793, 187.793, 187.793, 187.793, 187.793, 187.793, 187.793, 187.793, null, null, null, 186.15, 186.15, 186.15, 186.15, 186.15, 187.793, 187.793, 187.793, 187.793, 205.761, 187.793, 187.793, 187.793, 187.793, 187.793, 187.793, 205.761, 187.793, 187.793, 187.793, 205.761, 187.793, 187.793, 205.761, 205.761, 205.761, 187.793, 187.793, 205.761, 205.761, 187.793 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 249.813, 249.813, 249.813, null, 276.855 ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 12.0, 12.0, 12.0, 12.0, null, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, 301.11, 301.11, null, null, null, 301.11, 301.11, 301.11, 301.11, 301.11, 301.11, 301.11, null, null, null, 301.11, 301.11, 301.11, 301.11, 301.11, null, null, 301.11, 301.11, null, null, null, null, null, null, null, 274.95, 274.95, 274.95, 274.95, 274.95, 274.95, 274.95, 274.95, null, 274.95, 274.95, 274.95, 274.95, 274.95, 274.95 ],
+                label: "zybo-nextpnr-xilinx" ,
+                borderColor: "#68ff40",
+                fill: false
+            },
+            {
+                data: [ null, 192.456, 192.456, null, null, null, 192.456, 192.456, 192.456, 192.456, 192.456, 192.456, 192.456, null, null, null, 192.456, 192.456, 192.456, 192.456, 192.456, null, null, 192.456, 192.456, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#3dff94",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  charts.push(newLineChart(
+    "LUT-chart",
+    "zynq-ps7-counter: total LUT count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 29, 29, 29, 29, 29, 29, 29, null, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, null, 29, 29, 29, 29, 29 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 55, 55, 55, 55, 55, 55, 55, null, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, null, null, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, null, 55, 55, 55, 55, 55 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 29, null, 29, 29, 29, 29, 29, 29, 29, 29, null, null, null, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 29, null, 29, 29, 29, 29, 29, 29, 29, 29, null, null, null, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 56, 56, 56, null, 55 ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 55, 55, 55, 55, null, 55, 55, 55, 55, 55, 55 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, 71, 71, null, null, null, 71, 71, 71, 71, 71, 71, 71, null, null, null, 71, 71, 71, 71, 71, null, null, 71, 71, null, null, null, null, null, null, null, 52, 52, 52, 52, 52, 52, 52, 52, null, 52, 52, 52, 52, 52, 52 ],
+                label: "zybo-nextpnr-xilinx" ,
+                borderColor: "#68ff40",
+                fill: false
+            },
+            {
+                data: [ null, 71, 71, null, null, null, 71, 71, 71, 71, 71, 71, 71, null, null, null, 71, 71, 71, 71, 71, null, null, 71, 71, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#3dff94",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "DFF-chart",
+    "zynq-ps7-counter: total DFF count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 28, 28, 28, 28, 28, 28, 28, null, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, null, 28, 28, 28, 28, 28 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 28, 28, 28, 28, 28, 28, 28, null, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, null, null, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, null, 28, 28, 28, 28, 28 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 28, null, 28, 28, 28, 28, 28, 28, 28, 28, null, null, null, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 28, null, 28, 28, 28, 28, 28, 28, 28, 28, null, null, null, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 28, 28, 28, null, 28 ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 28, 28, 28, 28, null, 28, 28, 28, 28, 28, 28 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, 28, 28, null, null, null, 28, 28, 28, 28, 28, 28, 28, null, null, null, 28, 28, 28, 28, 28, null, null, 28, 28, null, null, null, null, null, null, null, 28, 28, 28, 28, 28, 28, 28, 28, null, 28, 28, 28, 28, 28, 28 ],
+                label: "zybo-nextpnr-xilinx" ,
+                borderColor: "#68ff40",
+                fill: false
+            },
+            {
+                data: [ null, 28, 28, null, null, null, 28, 28, 28, 28, 28, 28, 28, null, null, null, 28, 28, 28, 28, 28, null, null, 28, 28, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#3dff94",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "CARRY-chart",
+    "zynq-ps7-counter: total CARRY count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 7, 7, 7, 7, 7, 7, 7, null, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, null, 7, 7, 7, 7, 7 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 7, 7, 7, 7, 7, 7, 7, null, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, null, null, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, null, 7, 7, 7, 7, 7 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 7, null, 7, 7, 7, 7, 7, 7, 7, 7, null, null, null, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 7, null, 7, 7, 7, 7, 7, 7, 7, 7, null, null, null, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 14, 14, 14, null, 7 ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 7, 7, 7, 7, null, 7, 7, 7, 7, 7, 7 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-nextpnr-xilinx" ,
+                borderColor: "#68ff40",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#3dff94",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "IOB-chart",
+    "zynq-ps7-counter: total IOB count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 5, 5, 5, 5, 5, 5, 5, null, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, null, 5, 5, 5, 5, 5 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 5, 5, 5, 5, 5, 5, 5, null, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, null, null, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, null, 5, 5, 5, 5, 5 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 5, null, 5, 5, 5, 5, 5, 5, 5, 5, null, null, null, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 5, null, 5, 5, 5, 5, 5, 5, 5, 5, null, null, null, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 5, 5, 5, null, 5 ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 5, 5, 5, 5, null, 5, 5, 5, 5, 5, 5 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, 5, 5, null, null, null, 5, 5, 5, 5, 5, 5, 5, null, null, null, 5, 5, 5, 5, 5, null, null, 5, 5, null, null, null, null, null, null, null, 5, 5, 5, 5, 5, 5, 5, 5, null, 5, 5, 5, 5, 5, 5 ],
+                label: "zybo-nextpnr-xilinx" ,
+                borderColor: "#68ff40",
+                fill: false
+            },
+            {
+                data: [ null, 5, 5, null, null, null, 5, 5, 5, 5, 5, 5, 5, null, null, null, 5, 5, 5, 5, 5, null, null, 5, 5, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#3dff94",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "BRAM-chart",
+    "zynq-ps7-counter: total BRAM count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, null, 0 ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-nextpnr-xilinx" ,
+                borderColor: "#68ff40",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#3dff94",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "PLL-chart",
+    "zynq-ps7-counter: total PLL count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, null, 0 ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "zybo-nextpnr-xilinx" ,
+                borderColor: "#68ff40",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#3dff94",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "GLB-chart",
+    "zynq-ps7-counter: total GLB count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-vivado" ,
+                borderColor: "#49ffff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-yosys-vivado" ,
+                borderColor: "#d62900",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-vpr" ,
+                borderColor: "#a90066",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-vpr-fasm2bels" ,
+                borderColor: "#40ffd2",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-yosys-vivado-uhdm" ,
+                borderColor: "#ff63db",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-fpga-interchange" ,
+                borderColor: "#00c366",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx" ,
+                borderColor: "#68ff40",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "zybo-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#3dff94",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  </script>
+</body>
+</html>

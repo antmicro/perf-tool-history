@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>FPGA tool perf results: project dram-test-64x1d</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.0/dist/chart.min.js"></script>
+</head>
+<style>
+  #resource-graphs{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  #resource-graphs div {
+    width: 31vw;
+    max-width: 31vw;
+    max-height: 50vh;
+    margin: 1vh 1vw 1vw 1vh;
+  }
+  #topbar-legend {
+    max-height: 4em;
+    background-color: lightgrey;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+  }
+  #topbar-legend-flex {
+    display: flex;
+    flex-direction: row;
+  }
+  .topbar-legend-item {
+    margin: 0.1em 0.5em 0.5em 0.5em;
+  }
+  .topbar-legend-item div p {
+    margin-top: 0.5em;
+    margin-bottom: 0.1em;
+    font-size: 0.7em;
+    cursor: pointer;
+  }
+  .topbar-legend-color-indicator {
+    height: 0.5em;
+  }
+  .crosslined {
+    text-decoration: line-through;
+  }
+</style>
+
+<body>
+  <div id="topbar-platforms">
+    <select>
+      <option value="<all_configs>">(all configurations)</option>
+        <option value="nexys-video">nexys-video</option>
+        <option value="basys3">basys3</option>
+    </select>
+  </div>
+  <div id="topbar-legend">
+    <div id="topbar-legend-flex">
+      <p>XD</p>
+    </div>
+  </div>
+
+  <canvas id="runtime-chart" width="300" height="150"></canvas>
+  <canvas id="frequency-chart", width="300" height="150"></canvas>
+  <div id="resource-graphs">
+    <div>
+      <canvas id="LUT-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="DFF-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="CARRY-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="IOB-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="BRAM-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="PLL-chart"></canvas>
+    </div>
+    <div>
+      <canvas id="GLB-chart"></canvas>
+    </div>
+  </div>
+
+  <script>
+
+  let charts = [];
+
+  let dataset_sets = {
+    
+  }
+
+  function createLegendEntry(idx, name, color) {
+    return "<div class=\"topbar-legend-item\"><div><p id=\"topbar-legend-item-" +
+           idx + "\"onClick=\"toggleDataset(" + idx + ")\">" + name + "</p>" +
+           "</div><div style=\"background-color: " + color + ";\" " +
+           "class=\"topbar-legend-color-indicator\"></div></div>";
+  }
+
+  function makeLegend(chart) {
+    html_code = ""
+    ds_cnt = chart.data.datasets.length;
+    for (let i = 0; i < ds_cnt; i++) {
+      dataset = chart.data.datasets[i];
+      html_code += createLegendEntry(i, dataset.label, dataset.borderColor);
+    }
+
+    document.getElementById("topbar-legend-flex").innerHTML = html_code
+  }
+
+  function setDatasetVisible(idx, visibility) {
+    for (let i = 0; i < charts.length; i++) {
+      chart = charts[i];
+      chart.getDatasetMeta(idx).hidden = !visibility;
+      chart.update();
+    }
+  }
+
+  function onLegendClicked(event, legendItem, legend) {
+    idx = legendItem.datasetIndex
+    visibility = legendItem.hidden
+    setDatasetVisible(idx, visibility)
+  }
+
+  function toggleDataset(idx) {
+    for (let i = 0; i < charts.length; i++) {
+      chart = charts[i];
+      chart.getDatasetMeta(idx).hidden = !chart.getDatasetMeta(idx).hidden;
+      chart.update();
+    }
+
+    button = document.getElementById("topbar-legend-item-" + idx)
+    
+    if (charts[0].getDatasetMeta(idx).hidden)
+      button.className = "crosslined"
+    else
+      button.className = ""
+  }
+
+  function newLineChart(canvas_name, title, unitstr, labels, datasets, legend) {
+    return new Chart(document.getElementById(canvas_name), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: datasets
+      },
+      options: {
+        spanGaps: true,
+        plugins: {
+          title: {
+            display: true,
+            text: title
+          },
+          legend: {
+            display: legend,
+            onClick: onLegendClicked
+          }
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback: function(v, idx, vx) {
+                return v + unitstr;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  let firstChart = newLineChart(
+    "runtime-chart",
+    "dram-test-64x1d: total runtime",
+    "s",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 307.584, 253.603, 249.407, 233.669, 245.185, 208.218, 231.765, null, 238.296, 217.374, 217.704, 234.3, 263.842, 228.499, 264.868, 232.073, 230.654, 220.496, 210.501, 215.912, 424.578, 442.384, 327.566, 342.828, 298.318, 383.137, 411.444, 545.858, 319.48, 295.786, 390.986, 366.953, 280.33, 230.409, 235.583, 249.325, 210.777, 210.16, 212.957, 265.809, 255.508, null, 268.18, 174.587, 234.9, 247.058, 208.279 ],
+                label: "nexys-video-vivado" ,
+                borderColor: "#50ff02",
+                fill: false
+            },
+            {
+                data: [ 194.17, 210.009, 177.543, 216.917, 203.862, 167.771, 180.993, null, 173.852, 164.001, 203.881, 186.696, 170.609, 169.331, 205.945, 164.342, 191.73, 201.819, 191.791, 234.055, 255.204, 195.23, 272.324, 380.804, 259.019, 252.187, 237.165, 203.056, 230.275, 212.012, 462.603, 286.004, 231.503, 200.98, 188.978, 269.04, 165.025, 159.4, 169.213, 203.687, 341.564, null, 160.899, 148.489, 149.524, 181.431, 279.898 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 188.49, 130.93, 142.58, 114.7, 122.24, 119.27, 116.47, null, 121.42, 116.72, 118.4, 114.78, 117.75, 114.17, 127.99, 125.11, 130.15, 126.74, 108.9, 156.44, 144.99, 130.48, 141.3, 142.8, 147.43, 148.31, null, null, 177.71, 173.5, 209.06, 140.86, 143.87, 120.93, 208.59, 178.96, 180.01, 111.58, 120.89, 111.49, 153.42, null, 107.66, 148.38, 101.31, 116.88, 115.02 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 68.07, 78.9, 87.19, 73.79, 76.87, 71.53, 66.24, null, 68.19, 66.71, 75.52, 69.38, 71.72, 73.37, 77.56, 68.66, 76.59, 77.0, 81.56, 86.93, 99.03, 146.59, 183.26, 120.77, 108.66, 188.42, null, null, 115.64, 90.76, 163.81, 104.43, 89.78, 100.2, 106.07, 84.86, 113.83, 88.55, 100.37, 80.62, 134.34, null, 109.45, 72.55, 69.35, 126.22, 125.04 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, 346.322, 307.225, null, null, null, 287.858, 266.893, 271.935, 291.198, 280.228, 295.617, 297.116, null, null, null, 350.252, 324.818, 317.963, 341.2, 328.719, null, null, 495.82, 307.591, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffd132",
+                fill: false
+            },
+            {
+                data: [ null, 926.393, 929.071, null, null, null, 933.197, 899.244, 898.432, 888.971, 895.487, 949.516, 958.033, null, null, null, 1121.985, 843.771, 924.059, 929.313, 1634.351, null, null, 1004.681, 1115.658, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffff3d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 787.779, 807.988, 948.896, 1044.848, null, 791.701, 1084.457, 975.919, 816.884, 1121.045, 808.035 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 417.427, null, 441.654, 385.702, 342.022, 346.011, 397.94, 369.178, 407.58, 349.055, null, null, null, 459.441, 405.678, 355.756, 644.358, 465.679, 497.712, 622.542, 701.005, 532.986, 453.384, 523.903, 501.948, 408.418, 545.349, 568.93, 490.067, 614.787, 549.796, 372.604, 611.475, 546.16, 330.032, 364.577, 400.013, 622.501, 313.912, 409.768, 316.38, 501.389, 429.256, 578.418 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, 30.171, 30.235, null, null, null, 25.245, 29.361, 29.522, 30.785, 26.946, 32.261, 52.933, null, null, null, 34.983, 27.077, 28.041, 45.994, 48.888, null, null, 43.111, 33.031, null, null, null, null, null, null, null, 24.617, 26.685, 22.342, 46.509, 18.092, 19.083, 24.21, 18.79, null, 19.547, 24.546, 25.359, 18.471, null, 42.583 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 77.58, 85.38, 92.92, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, 328.789, 532.726, 377.637, null, 341.296, 381.018, 290.684, 350.972, 361.509, 372.805, 557.706, 367.259, null, null, null, 430.221, 475.929, 381.519, 479.43, 719.891, 485.417, 826.785, 740.577, 1044.325, 505.233, 546.413, 591.339, 879.873, 720.098, 634.064, 633.751, 697.816, 474.677, 467.579, 588.003, 366.66, 362.854, 619.645, 393.933, 676.309, 377.025, 408.548, 450.224, 590.908, 517.042, 495.089 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, 42.726, 52.144, null, null, null, 55.887, 49.485, 49.245, 55.91, 46.966, 52.537, 51.143, null, null, null, 56.077, 46.743, 52.219, 91.621, 106.601, null, null, 67.013, 63.16, null, null, null, null, null, null, null, 51.293, 43.761, 46.647, 47.688, 24.478, 30.094, 30.545, 60.64, null, 27.833, 34.885, 28.578, 37.724, null, 28.149 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, 1265.404, 1417.02, 1221.787, null, 1149.144, 1177.155, 1085.221, 1164.924, 1303.344, 1278.987, 1294.677, 1351.331, null, null, null, 1294.0, 1280.269, 1393.744, 1480.222, 2908.813, 1519.003, 1690.234, 1365.725, 2275.285, 2088.777, 1930.389, 1547.012, 1761.787, 1692.219, 2911.865, 1670.182, 2144.689, 1298.646, 1121.687, 1506.666, 1225.192, 976.786, 1357.257, 1299.142, 2026.643, 1032.52, 1171.739, 1152.915, 1369.739, 1236.311, 1027.862 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 144.67, 106.8, 114.04, null, null ],
+                label: "nexys-video-yosys-vivado-uhdm" ,
+                borderColor: "#6c00f5",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 124.573, null, 133.44, 115.452, 133.174, 121.038, 121.532, 112.957, 175.063, 117.577, null, null, null, 136.825, 126.505, 125.776, 156.486, 130.655, 308.447, 387.06, 310.145, 150.762, 251.994, 176.775, 266.303, 149.547, 287.141, 156.891, 153.685, 206.133, 192.676, 146.471, 123.236, 120.451, 146.938, 153.221, 130.361, 178.318, 116.352, 114.104, 136.206, 136.427, 142.88, 387.313 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+    ] ,
+    false
+  );
+
+  charts.push(firstChart);
+  makeLegend(firstChart);
+
+  charts.push(newLineChart(
+    "frequency-chart",
+    "dram-test-64x1d: actual frequency",
+    "MHz",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, null, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, 183.184, null, 183.184, 183.184, 183.184, 183.184, 183.184 ],
+                label: "nexys-video-vivado" ,
+                borderColor: "#50ff02",
+                fill: false
+            },
+            {
+                data: [ 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, null, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, 223.864, null, 223.864, 223.864, 223.864, 223.864, 223.864 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 190.876, 190.876, 190.876, 190.876, 190.876, 190.876, 190.876, null, 190.876, 190.876, 190.876, 190.876, 190.876, 190.876, 190.876, 190.876, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, null, null, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, 176.46, null, 176.46, 176.46, 176.46, 176.46, 176.46 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 190.476, 190.476, 190.476, 190.476, 190.476, 190.476, 190.476, null, 190.476, 190.476, 190.476, 190.476, 190.476, 190.476, 190.476, 190.476, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, null, null, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, 192.308, null, 192.308, 192.308, 192.308, 192.308, 192.308 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, 123.153, 118.596, null, null, null, 122.926, 123.533, 112.183, 119.531, 126.502, 114.012, 127.275, null, null, null, 119.947, 118.329, 125.786, 123.579, 123.762, null, null, 116.387, 113.766, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffd132",
+                fill: false
+            },
+            {
+                data: [ null, 136.911, 143.143, null, null, null, 140.43, 132.153, 140.213, 134.463, 144.134, 142.389, 146.284, null, null, null, 139.548, 135.796, 144.238, 135.925, 138.831, null, null, 135.722, 134.735, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffff3d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 12.0, 12.0, 12.0, 12.0, null, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 104.395, null, 104.395, 104.395, 104.395, 137.571, 137.571, 137.571, 137.571, 134.282, null, null, null, 125.329, 128.601, 124.782, 124.782, 119.119, 125.707, 125.707, 125.707, 123.472, 119.104, 124.875, 124.394, 126.518, 126.518, 128.403, 122.82, 121.021, 125.078, 125.078, 122.1, 121.139, 120.875, 120.861, 130.276, 130.276, 133.049, 127.162, 125.282, 121.669, 121.669, 113.753 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, 171.76, 200.92, null, null, null, 198.06, 183.92, 193.2, 200.92, 197.59, 187.93, 197.16, null, null, null, 206.44, 188.5, 200.0, 194.89, 188.71, null, null, 197.78, 189.14, null, null, null, null, null, null, null, 208.68, 208.68, 208.68, 210.04, 210.04, 210.04, 210.04, 210.04, null, 210.04, 210.04, 210.04, 210.04, null, 210.04 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 159.363, 159.363, 159.363, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, 124.625, 124.625, 124.625, null, 124.625, 124.625, 124.625, 122.963, 122.963, 122.963, 122.963, 120.847, null, null, null, 119.99, 122.918, 119.699, 119.699, 126.165, 120.542, 120.542, 120.542, 121.936, 121.254, 119.702, 118.019, 129.423, 129.423, 123.301, 119.585, 123.188, 122.825, 122.825, 120.215, 120.072, 119.815, 118.038, 121.609, 121.609, 124.131, 118.638, 120.072, 120.215, 120.215, 122.825 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, 197.51, 203.87, null, null, null, 200.64, 210.3, 204.54, 206.36, 207.3, 210.53, 194.97, null, null, null, 197.98, 208.12, 203.17, 209.16, 212.31, null, null, 200.84, 200.64, null, null, null, null, null, null, null, 194.74, 194.74, 194.74, 219.97, 219.97, 219.97, 219.97, 219.97, null, 219.97, 219.97, 219.97, 219.97, null, 219.97 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, 129.45, 129.45, 129.45, null, 129.45, 129.45, 129.45, 128.287, 128.287, 128.287, 128.287, 143.41, null, null, null, 123.609, 121.64, 125.345, 125.345, 127.73, 121.832, 121.832, 121.832, 123.487, 124.906, 123.609, 120.656, 133.191, 133.191, 122.594, 125.471, 124.595, 124.875, 124.875, 122.73, 122.579, 123.594, 123.625, 125.849, 125.849, 122.279, 125.313, 122.579, 122.73, 122.73, 124.875 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 171.615, 171.615, 171.615, null, null ],
+                label: "nexys-video-yosys-vivado-uhdm" ,
+                borderColor: "#6c00f5",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 100.977, null, 100.977, 100.977, 100.977, 129.877, 129.877, 129.877, 129.877, 126.521, null, null, null, 121.285, 124.329, 121.048, 121.048, 119.52, 124.129, 124.129, 124.129, 119.427, 118.879, 122.659, 122.639, 125.076, 125.076, 131.109, 123.299, 119.07, 121.984, 121.984, 118.211, 119.37, 117.517, 119.853, 128.542, 128.542, 131.235, 123.78, 122.441, 121.261, 121.261, 111.2 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  charts.push(newLineChart(
+    "LUT-chart",
+    "dram-test-64x1d: total LUT count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 270, 270, 270, 270, 270, 270, 270, null, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, null, 270, 270, 270, 270, 270 ],
+                label: "nexys-video-vivado" ,
+                borderColor: "#50ff02",
+                fill: false
+            },
+            {
+                data: [ 270, 270, 270, 270, 270, 270, 270, null, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, 270, null, 270, 270, 270, 270, 270 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 298, 298, 298, 298, 298, 298, 298, null, 298, 298, 298, 298, 298, 298, 298, 298, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, null, null, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, null, 297, 297, 297, 297, 297 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 298, 298, 298, 298, 298, 298, 298, null, 298, 298, 298, 298, 298, 298, 298, 298, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, null, null, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, 297, null, 297, 297, 297, 297, 297 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, 354, 354, null, null, null, 354, 354, 354, 354, 354, 354, 354, null, null, null, 354, 354, 354, 354, 354, null, null, 354, 354, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffd132",
+                fill: false
+            },
+            {
+                data: [ null, 354, 354, null, null, null, 354, 354, 354, 354, 354, 354, 354, null, null, null, 354, 354, 354, 354, 354, null, null, 354, 354, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffff3d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 317, 317, 317, 317, null, 317, 317, 317, 317, 317, 317 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 251, null, 251, 251, 251, 251, 251, 251, 251, 251, null, null, null, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, 354, 354, null, null, null, 354, 354, 354, 354, 354, 354, 354, null, null, null, 354, 354, 354, 354, 354, null, null, 354, 354, null, null, null, null, null, null, null, 280, 280, 280, 264, 264, 264, 264, 264, null, 264, 264, 264, 264, null, 264 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 368, 368, 368, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, 251, 251, 251, null, 251, 251, 251, 251, 251, 251, 251, 251, null, null, null, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, 354, 354, null, null, null, 354, 354, 354, 354, 354, 354, 354, null, null, null, 354, 354, 354, 354, 354, null, null, 354, 354, null, null, null, null, null, null, null, 280, 280, 280, 264, 264, 264, 264, 264, null, 264, 264, 264, 264, null, 264 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, 251, 251, 251, null, 251, 251, 251, 251, 251, 251, 251, 251, null, null, null, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 368, 368, 368, null, null ],
+                label: "nexys-video-yosys-vivado-uhdm" ,
+                borderColor: "#6c00f5",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 251, null, 251, 251, 251, 251, 251, 251, 251, 251, null, null, null, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276, 276 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "DFF-chart",
+    "dram-test-64x1d: total DFF count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 208, 208, 208, 208, 208, 208, 208, null, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, null, 208, 208, 208, 208, 208 ],
+                label: "nexys-video-vivado" ,
+                borderColor: "#50ff02",
+                fill: false
+            },
+            {
+                data: [ 208, 208, 208, 208, 208, 208, 208, null, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, 208, null, 208, 208, 208, 208, 208 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 205, 205, 205, 205, 205, 205, 205, null, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, null, null, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, null, 205, 205, 205, 205, 205 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 205, 205, 205, 205, 205, 205, 205, null, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, null, null, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, null, 205, 205, 205, 205, 205 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, 221, 221, null, null, null, 221, 221, 221, 221, 221, 221, 221, null, null, null, 221, 221, 221, 221, 221, null, null, 221, 221, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffd132",
+                fill: false
+            },
+            {
+                data: [ null, 221, 221, null, null, null, 221, 221, 221, 221, 221, 221, 221, null, null, null, 221, 221, 221, 221, 221, null, null, 221, 221, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffff3d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 206, 206, 206, 206, null, 206, 206, 206, 206, 206, 206 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 206, null, 206, 206, 206, 206, 206, 206, 206, 206, null, null, null, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, 221, 221, null, null, null, 221, 221, 221, 221, 221, 221, 221, null, null, null, 221, 221, 221, 221, 221, null, null, 221, 221, null, null, null, null, null, null, null, 206, 206, 206, 206, 206, 206, 206, 206, null, 206, 206, 206, 206, null, 206 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 186, 186, 186, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, 206, 206, 206, null, 206, 206, 206, 206, 206, 206, 206, 206, null, null, null, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, 221, 221, null, null, null, 221, 221, 221, 221, 221, 221, 221, null, null, null, 221, 221, 221, 221, 221, null, null, 221, 221, null, null, null, null, null, null, null, 206, 206, 206, 206, 206, 206, 206, 206, null, 206, 206, 206, 206, null, 206 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, 206, 206, 206, null, 206, 206, 206, 206, 206, 206, 206, 206, null, null, null, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 186, 186, 186, null, null ],
+                label: "nexys-video-yosys-vivado-uhdm" ,
+                borderColor: "#6c00f5",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 206, null, 206, 206, 206, 206, 206, 206, 206, 206, null, null, null, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "CARRY-chart",
+    "dram-test-64x1d: total CARRY count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "nexys-video-vivado" ,
+                borderColor: "#50ff02",
+                fill: false
+            },
+            {
+                data: [ 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, null, 4, 4, 4, 4, 4 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 21, 21, 21, 21, 21, 21, 21, null, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, null, null, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, null, 21, 21, 21, 21, 21 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 21, 21, 21, 21, 21, 21, 21, null, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, null, null, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, null, 21, 21, 21, 21, 21 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffd132",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffff3d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 21, 21, 21, 21, null, 21, 21, 21, 21, 21, 21 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 21, null, 21, 21, 21, 21, 21, 21, 21, 21, null, null, null, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null, 0 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 21, 21, 21, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, 21, 21, 21, null, 21, 21, 21, 21, 21, 21, 21, 21, null, null, null, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null, 0 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, 21, 21, 21, null, 21, 21, 21, 21, 21, 21, 21, 21, null, null, null, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 21, 21, 21, null, null ],
+                label: "nexys-video-yosys-vivado-uhdm" ,
+                borderColor: "#6c00f5",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 21, null, 21, 21, 21, 21, 21, 21, 21, 21, null, null, null, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "IOB-chart",
+    "dram-test-64x1d: total IOB count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, 35 ],
+                label: "nexys-video-vivado" ,
+                borderColor: "#50ff02",
+                fill: false
+            },
+            {
+                data: [ 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, 35 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, null, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, 35 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, null, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, 35 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, 35, 35, null, null, null, 35, 35, 35, 35, 35, 35, 35, null, null, null, 35, 35, 35, 35, 35, null, null, 35, 35, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffd132",
+                fill: false
+            },
+            {
+                data: [ null, 35, 35, null, null, null, 35, 35, 35, 35, 35, 35, 35, null, null, null, 35, 35, 35, 35, 35, null, null, 35, 35, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffff3d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 35, 35, 35, 35, null, 35, 35, 35, 35, 35, 35 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 35, null, 35, 35, 35, 35, 35, 35, 35, 35, null, null, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, 35, 35, null, null, null, 35, 35, 35, 35, 35, 35, 35, null, null, null, 35, 35, 35, 35, 35, null, null, 35, 35, null, null, null, null, null, null, null, 35, 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, null, 35 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 35, 35, 35, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, 35, 35, 35, null, 35, 35, 35, 35, 35, 35, 35, 35, null, null, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, 35, 35, null, null, null, 35, 35, 35, 35, 35, 35, 35, null, null, null, 35, 35, 35, 35, 35, null, null, 35, 35, null, null, null, null, null, null, null, 35, 35, 35, 35, 35, 35, 35, 35, null, 35, 35, 35, 35, null, 35 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, 35, 35, 35, null, 35, 35, 35, 35, 35, 35, 35, 35, null, null, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 35, 35, 35, null, null ],
+                label: "nexys-video-yosys-vivado-uhdm" ,
+                borderColor: "#6c00f5",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 35, null, 35, 35, 35, 35, 35, 35, 35, 35, null, null, null, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35, 35 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "BRAM-chart",
+    "dram-test-64x1d: total BRAM count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-vivado" ,
+                borderColor: "#50ff02",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffd132",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffff3d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null, 0 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null, 0 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, null, null ],
+                label: "nexys-video-yosys-vivado-uhdm" ,
+                borderColor: "#6c00f5",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "PLL-chart",
+    "dram-test-64x1d: total PLL count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-vivado" ,
+                borderColor: "#50ff02",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, 0 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffd132",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffff3d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null, 0 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, null, null, 0, 0, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, null, 0, 0, 0, 0, null, 0 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, 0, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, null, null ],
+                label: "nexys-video-yosys-vivado-uhdm" ,
+                borderColor: "#6c00f5",
+                fill: false
+            },
+            {
+                data: [ null, null, null, 0, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+  charts.push(newLineChart(
+    "GLB-chart",
+    "dram-test-64x1d: total GLB count",
+    "",
+    [ "2021-01-22 10:05:58", "2021-02-11 14:59:16", "2021-02-12 07:47:05", "2021-02-12 12:53:07", "2021-02-15 16:58:43", "2021-02-16 16:40:20", "2021-02-17 15:11:08", "2021-02-23 10:18:27", "2021-03-08 09:27:57", "2021-03-09 10:48:18", "2021-03-10 11:15:15", "2021-03-11 07:39:08", "2021-03-12 14:24:12", "2021-03-16 09:46:06", "2021-03-16 09:49:40", "2021-03-16 15:40:26", "2021-03-22 13:54:18", "2021-03-23 20:10:08", "2021-03-29 10:15:17", "2021-03-30 13:54:45", "2021-04-08 13:38:06", "2021-04-19 17:12:07", "2021-04-20 15:30:15", "2021-04-22 13:45:19", "2021-04-26 16:11:57", "2021-04-28 02:52:39", "2021-04-28 15:13:41", "2021-04-30 13:33:05", "2021-05-04 22:08:05", "2021-05-05 16:00:09", "2021-07-07 08:31:59", "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    
+    [
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-vivado" ,
+                borderColor: "#50ff02",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-vivado" ,
+                borderColor: "#00c91e",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffd132",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx-fasm2bels" ,
+                borderColor: "#ffff3d",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-yosys-vivado-uhdm" ,
+                borderColor: "#00c3a3",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "nexys-video-yosys-vivado-uhdm" ,
+                borderColor: "#6c00f5",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  </script>
+</body>
+</html>

@@ -30,9 +30,11 @@
   .topbar-legend-item {
     margin: 0.1em 0.5em 0.5em 0.5em;
   }
-  .topbar-legend-item div button {
+  .topbar-legend-item div p {
     margin-top: 0.5em;
     margin-bottom: 0.1em;
+    font-size: 0.7em;
+    cursor: pointer;
   }
   .topbar-legend-color-indicator {
     height: 0.5em;
@@ -135,6 +137,7 @@
         datasets: datasets
       },
       options: {
+        spanGaps: true,
         plugins: {
           title: {
             display: true,
@@ -162,157 +165,79 @@
     "runtime-chart",
     "project: total runtime",
     "s",
-    [ "2021-08-15 09:58:17", "2021-08-16 09:58:17" ],
+    [ "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00" ],
     
     [
             {
-                data: [ 91.269, 91.269 ],
-                label: "zybo-vpr" ,
-                borderColor: "#a90066",
+                data: [ 2706.54, 1981.069, null, 1788.181, 1997.3 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
                 fill: false
             },
             {
-                data: [ 268.117, 268.117 ],
+                data: [ 2063.179, 2070.673, null, 1657.633, 2085.36 ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ 78.414, 77.227, null, 77.43, 67.43 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ 139.991, 66.057, null, 68.257, 63.437 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ 524.302, 357.864, 539.541, null, 485.023 ],
                 label: "nexys-video-vivado" ,
                 borderColor: "#50ff02",
                 fill: false
             },
             {
-                data: [ 269.293, 269.293 ],
-                label: "arty-a35t-vpr-fasm2bels" ,
-                borderColor: "#ffce0f",
-                fill: false
-            },
-            {
-                data: [ 150.43, 150.43 ],
-                label: "nexys-video-yosys-vivado-uhdm" ,
-                borderColor: "#6c00f5",
-                fill: false
-            },
-            {
-                data: [ 212.614, 212.614 ],
-                label: "arty-a100t-vpr" ,
-                borderColor: "#eb00d2",
-                fill: false
-            },
-            {
-                data: [ 152.72, 152.72 ],
-                label: "nexys-video-yosys-vivado" ,
-                borderColor: "#ff2822",
-                fill: false
-            },
-            {
-                data: [ 443.727, 443.727 ],
-                label: "arty-a100t-vpr-fasm2bels" ,
-                borderColor: "#8f10ff",
-                fill: false
-            },
-            {
-                data: [ 107.68, 107.68 ],
-                label: "arty-a100t-yosys-vivado" ,
-                borderColor: "#007cb0",
-                fill: false
-            },
-            {
-                data: [ 89.79, 89.79 ],
-                label: "zybo-yosys-vivado" ,
-                borderColor: "#d62900",
-                fill: false
-            },
-            {
-                data: [ 210.453, 210.453 ],
-                label: "zybo-vivado" ,
-                borderColor: "#49ffff",
-                fill: false
-            },
-            {
-                data: [ 130.907, 130.907 ],
-                label: "arty-a35t-vpr" ,
-                borderColor: "#d50012",
-                fill: false
-            },
-            {
-                data: [ 59.94, 59.94 ],
-                label: "arty-a100t-yosys-vivado-uhdm" ,
-                borderColor: "#60ffff",
-                fill: false
-            },
-            {
-                data: [ 319.587, 319.587 ],
-                label: "basys3-vpr-fasm2bels" ,
-                borderColor: "#05ffb1",
-                fill: false
-            },
-            {
-                data: [ 267.157, 267.157 ],
-                label: "zybo-vpr-fasm2bels" ,
-                borderColor: "#40ffd2",
-                fill: false
-            },
-            {
-                data: [ 61.77, 61.77 ],
-                label: "basys3-yosys-vivado" ,
-                borderColor: "#4bffc1",
-                fill: false
-            },
-            {
-                data: [ 721.702, 721.702 ],
-                label: "nexys-video-vpr-fasm2bels" ,
-                borderColor: "#0600ac",
-                fill: false
-            },
-            {
-                data: [ 93.8, 93.8 ],
-                label: "arty-a35t-yosys-vivado" ,
-                borderColor: "#00c531",
-                fill: false
-            },
-            {
-                data: [ 51.18, 51.18 ],
-                label: "zybo-yosys-vivado-uhdm" ,
-                borderColor: "#ff63db",
-                fill: false
-            },
-            {
-                data: [ 135.719, 135.719 ],
-                label: "basys3-vpr" ,
-                borderColor: "#07caff",
-                fill: false
-            },
-            {
-                data: [ 227.762, 227.762 ],
-                label: "arty-a35t-vivado" ,
-                borderColor: "#ff2e81",
-                fill: false
-            },
-            {
-                data: [ 328.05, 328.05 ],
-                label: "nexys-video-vpr" ,
-                borderColor: "#00cbce",
-                fill: false
-            },
-            {
-                data: [ 236.895, 236.895 ],
-                label: "arty-a100t-vivado" ,
-                borderColor: "#00a461",
-                fill: false
-            },
-            {
-                data: [ 227.395, 227.395 ],
+                data: [ 262.1, 320.618, 372.544, null, 314.454 ],
                 label: "basys3-vivado" ,
                 borderColor: "#00c91e",
                 fill: false
             },
             {
-                data: [ 96.1, 96.1 ],
-                label: "basys3-yosys-vivado-uhdm" ,
-                borderColor: "#00c3a3",
+                data: [ 1258.538, 1311.529, 2273.399, 1169.521, 1295.277 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
                 fill: false
             },
             {
-                data: [ 54.64, 54.64 ],
-                label: "arty-a35t-yosys-vivado-uhdm" ,
-                borderColor: "#0061cf",
+                data: [ 560.703, 809.924, 1026.416, 473.585, 529.1 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ 639.387, 520.939, 544.627, 475.805, 733.197 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ 239.478, 489.445, 442.051, 250.176, 223.89 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ 295.58, 230.51, 314.54, null, 241.14 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 178.16, 220.93, 168.31, null, 258.58 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
                 fill: false
             },
     ] ,
@@ -326,157 +251,79 @@
     "frequency-chart",
     "project: actual frequency",
     "MHz",
-    [ "2021-08-15 09:58:17", "2021-08-16 09:58:17" ],
+    [ "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00" ],
     
     [
             {
-                data: [ 239.025, 239.025 ],
-                label: "zybo-vpr" ,
-                borderColor: "#a90066",
+                data: [ 12.0, 12.0, null, 12.0, 12.0 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
                 fill: false
             },
             {
-                data: [ 372.856, 372.856 ],
+                data: [ 12.0, 12.0, null, 12.0, 12.0 ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ 85.32, 85.32, null, 85.32, 85.32 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ 77.59, 77.59, null, 77.59, 77.59 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ 150.67, 150.67, 150.67, null, 150.67 ],
                 label: "nexys-video-vivado" ,
                 borderColor: "#50ff02",
                 fill: false
             },
             {
-                data: [ 229.674, 229.674 ],
-                label: "arty-a35t-vpr-fasm2bels" ,
-                borderColor: "#ffce0f",
-                fill: false
-            },
-            {
-                data: [ 372.856, 372.856 ],
-                label: "nexys-video-yosys-vivado-uhdm" ,
-                borderColor: "#6c00f5",
-                fill: false
-            },
-            {
-                data: [ 240.388, 240.388 ],
-                label: "arty-a100t-vpr" ,
-                borderColor: "#eb00d2",
-                fill: false
-            },
-            {
-                data: [ 372.856, 372.856 ],
-                label: "nexys-video-yosys-vivado" ,
-                borderColor: "#ff2822",
-                fill: false
-            },
-            {
-                data: [ 246.366, 246.366 ],
-                label: "arty-a100t-vpr-fasm2bels" ,
-                borderColor: "#8f10ff",
-                fill: false
-            },
-            {
-                data: [ 406.504, 406.504 ],
-                label: "arty-a100t-yosys-vivado" ,
-                borderColor: "#007cb0",
-                fill: false
-            },
-            {
-                data: [ 393.856, 393.856 ],
-                label: "zybo-yosys-vivado" ,
-                borderColor: "#d62900",
-                fill: false
-            },
-            {
-                data: [ 393.856, 393.856 ],
-                label: "zybo-vivado" ,
-                borderColor: "#49ffff",
-                fill: false
-            },
-            {
-                data: [ 237.287, 237.287 ],
-                label: "arty-a35t-vpr" ,
-                borderColor: "#d50012",
-                fill: false
-            },
-            {
-                data: [ 406.504, 406.504 ],
-                label: "arty-a100t-yosys-vivado-uhdm" ,
-                borderColor: "#60ffff",
-                fill: false
-            },
-            {
-                data: [ 229.674, 229.674 ],
-                label: "basys3-vpr-fasm2bels" ,
-                borderColor: "#05ffb1",
-                fill: false
-            },
-            {
-                data: [ 227.221, 227.221 ],
-                label: "zybo-vpr-fasm2bels" ,
-                borderColor: "#40ffd2",
-                fill: false
-            },
-            {
-                data: [ 372.856, 372.856 ],
-                label: "basys3-yosys-vivado" ,
-                borderColor: "#4bffc1",
-                fill: false
-            },
-            {
-                data: [ 246.366, 246.366 ],
-                label: "nexys-video-vpr-fasm2bels" ,
-                borderColor: "#0600ac",
-                fill: false
-            },
-            {
-                data: [ 372.856, 372.856 ],
-                label: "arty-a35t-yosys-vivado" ,
-                borderColor: "#00c531",
-                fill: false
-            },
-            {
-                data: [ 393.856, 393.856 ],
-                label: "zybo-yosys-vivado-uhdm" ,
-                borderColor: "#ff63db",
-                fill: false
-            },
-            {
-                data: [ 237.287, 237.287 ],
-                label: "basys3-vpr" ,
-                borderColor: "#07caff",
-                fill: false
-            },
-            {
-                data: [ 372.856, 372.856 ],
-                label: "arty-a35t-vivado" ,
-                borderColor: "#ff2e81",
-                fill: false
-            },
-            {
-                data: [ 249.086, 249.086 ],
-                label: "nexys-video-vpr" ,
-                borderColor: "#00cbce",
-                fill: false
-            },
-            {
-                data: [ 406.504, 406.504 ],
-                label: "arty-a100t-vivado" ,
-                borderColor: "#00a461",
-                fill: false
-            },
-            {
-                data: [ 372.856, 372.856 ],
+                data: [ 154.488, 154.488, 154.488, null, 154.488 ],
                 label: "basys3-vivado" ,
                 borderColor: "#00c91e",
                 fill: false
             },
             {
-                data: [ 372.856, 372.856 ],
-                label: "basys3-yosys-vivado-uhdm" ,
-                borderColor: "#00c3a3",
+                data: [ 66.173, 70.057, 70.057, 66.84, 68.432 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
                 fill: false
             },
             {
-                data: [ 372.856, 372.856 ],
-                label: "arty-a35t-yosys-vivado-uhdm" ,
-                borderColor: "#0061cf",
+                data: [ 70.082, 68.956, 68.956, 69.502, 70.363 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ 65.886, 69.351, 69.351, 66.29, 67.317 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ 69.397, 67.729, 67.729, 68.226, 69.65 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ 131.096, 131.096, 131.096, null, 131.096 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 135.685, 135.685, 135.685, null, 135.685 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
                 fill: false
             },
     ] ,
@@ -487,157 +334,79 @@
     "LUT-chart",
     "project: total LUT count",
     "",
-    [ "2021-08-15 09:58:17", "2021-08-16 09:58:17" ],
+    [ "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00" ],
     
     [
             {
-                data: [ 1, 1 ],
-                label: "zybo-vpr" ,
-                borderColor: "#a90066",
+                data: [ 2082, 2082, null, 2082, 2082 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
                 fill: false
             },
             {
-                data: [ 1, 1 ],
+                data: [ 2082, 2082, null, 2082, 2082 ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ 1389, 1389, null, 1389, 1389 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ 1389, 1389, null, 1389, 1389 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ 967, 967, 967, null, 967 ],
                 label: "nexys-video-vivado" ,
                 borderColor: "#50ff02",
                 fill: false
             },
             {
-                data: [ 1, 1 ],
-                label: "arty-a35t-vpr-fasm2bels" ,
-                borderColor: "#ffce0f",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "nexys-video-yosys-vivado-uhdm" ,
-                borderColor: "#6c00f5",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "arty-a100t-vpr" ,
-                borderColor: "#eb00d2",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "nexys-video-yosys-vivado" ,
-                borderColor: "#ff2822",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "arty-a100t-vpr-fasm2bels" ,
-                borderColor: "#8f10ff",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "arty-a100t-yosys-vivado" ,
-                borderColor: "#007cb0",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "zybo-yosys-vivado" ,
-                borderColor: "#d62900",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "zybo-vivado" ,
-                borderColor: "#49ffff",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "arty-a35t-vpr" ,
-                borderColor: "#d50012",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "arty-a100t-yosys-vivado-uhdm" ,
-                borderColor: "#60ffff",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "basys3-vpr-fasm2bels" ,
-                borderColor: "#05ffb1",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "zybo-vpr-fasm2bels" ,
-                borderColor: "#40ffd2",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "basys3-yosys-vivado" ,
-                borderColor: "#4bffc1",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "nexys-video-vpr-fasm2bels" ,
-                borderColor: "#0600ac",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "arty-a35t-yosys-vivado" ,
-                borderColor: "#00c531",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "zybo-yosys-vivado-uhdm" ,
-                borderColor: "#ff63db",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "basys3-vpr" ,
-                borderColor: "#07caff",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "arty-a35t-vivado" ,
-                borderColor: "#ff2e81",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "nexys-video-vpr" ,
-                borderColor: "#00cbce",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
-                label: "arty-a100t-vivado" ,
-                borderColor: "#00a461",
-                fill: false
-            },
-            {
-                data: [ 1, 1 ],
+                data: [ 967, 967, 967, null, 967 ],
                 label: "basys3-vivado" ,
                 borderColor: "#00c91e",
                 fill: false
             },
             {
-                data: [ 1, 1 ],
-                label: "basys3-yosys-vivado-uhdm" ,
-                borderColor: "#00c3a3",
+                data: [ 1166, 1166, 1166, 1166, 1166 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
                 fill: false
             },
             {
-                data: [ 1, 1 ],
-                label: "arty-a35t-yosys-vivado-uhdm" ,
-                borderColor: "#0061cf",
+                data: [ 1166, 1166, 1166, 1166, 1166 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ 1166, 1166, 1166, 1166, 1166 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ 1166, 1166, 1166, 1166, 1166 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ 1161, 1161, 1161, null, 1161 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 1161, 1161, 1161, null, 1161 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
                 fill: false
             },
     ] ,
@@ -647,157 +416,79 @@
     "DFF-chart",
     "project: total DFF count",
     "",
-    [ "2021-08-15 09:58:17", "2021-08-16 09:58:17" ],
+    [ "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00" ],
     
     [
             {
-                data: [ 24, 24 ],
-                label: "zybo-vpr" ,
-                borderColor: "#a90066",
+                data: [ 2361, 2361, null, 2361, 2361 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
                 fill: false
             },
             {
-                data: [ 24, 24 ],
+                data: [ 2361, 2361, null, 2361, 2361 ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ 1081, 1081, null, 1081, 1081 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ 1081, 1081, null, 1081, 1081 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ 1036, 1036, 1036, null, 1036 ],
                 label: "nexys-video-vivado" ,
                 borderColor: "#50ff02",
                 fill: false
             },
             {
-                data: [ 24, 24 ],
-                label: "arty-a35t-vpr-fasm2bels" ,
-                borderColor: "#ffce0f",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "nexys-video-yosys-vivado-uhdm" ,
-                borderColor: "#6c00f5",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "arty-a100t-vpr" ,
-                borderColor: "#eb00d2",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "nexys-video-yosys-vivado" ,
-                borderColor: "#ff2822",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "arty-a100t-vpr-fasm2bels" ,
-                borderColor: "#8f10ff",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "arty-a100t-yosys-vivado" ,
-                borderColor: "#007cb0",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "zybo-yosys-vivado" ,
-                borderColor: "#d62900",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "zybo-vivado" ,
-                borderColor: "#49ffff",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "arty-a35t-vpr" ,
-                borderColor: "#d50012",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "arty-a100t-yosys-vivado-uhdm" ,
-                borderColor: "#60ffff",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "basys3-vpr-fasm2bels" ,
-                borderColor: "#05ffb1",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "zybo-vpr-fasm2bels" ,
-                borderColor: "#40ffd2",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "basys3-yosys-vivado" ,
-                borderColor: "#4bffc1",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "nexys-video-vpr-fasm2bels" ,
-                borderColor: "#0600ac",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "arty-a35t-yosys-vivado" ,
-                borderColor: "#00c531",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "zybo-yosys-vivado-uhdm" ,
-                borderColor: "#ff63db",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "basys3-vpr" ,
-                borderColor: "#07caff",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "arty-a35t-vivado" ,
-                borderColor: "#ff2e81",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "nexys-video-vpr" ,
-                borderColor: "#00cbce",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
-                label: "arty-a100t-vivado" ,
-                borderColor: "#00a461",
-                fill: false
-            },
-            {
-                data: [ 24, 24 ],
+                data: [ 1036, 1036, 1036, null, 1036 ],
                 label: "basys3-vivado" ,
                 borderColor: "#00c91e",
                 fill: false
             },
             {
-                data: [ 24, 24 ],
-                label: "basys3-yosys-vivado-uhdm" ,
-                borderColor: "#00c3a3",
+                data: [ 1081, 1081, 1081, 1081, 1081 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
                 fill: false
             },
             {
-                data: [ 24, 24 ],
-                label: "arty-a35t-yosys-vivado-uhdm" ,
-                borderColor: "#0061cf",
+                data: [ 1081, 1081, 1081, 1081, 1081 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ 1081, 1081, 1081, 1081, 1081 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ 1081, 1081, 1081, 1081, 1081 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ 1097, 1097, 1097, null, 1097 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 1097, 1097, 1097, null, 1097 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
                 fill: false
             },
     ] ,
@@ -807,157 +498,79 @@
     "CARRY-chart",
     "project: total CARRY count",
     "",
-    [ "2021-08-15 09:58:17", "2021-08-16 09:58:17" ],
+    [ "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00" ],
     
     [
             {
-                data: [ 6, 8 ],
-                label: "zybo-vpr" ,
-                borderColor: "#a90066",
+                data: [ 57, 57, null, 57, 57 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
                 fill: false
             },
             {
-                data: [ 6, 6 ],
+                data: [ 57, 57, null, 57, 57 ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ 0, 0, null, 0, 0 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ 0, 0, null, 0, 0 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ 50, 50, 50, null, 50 ],
                 label: "nexys-video-vivado" ,
                 borderColor: "#50ff02",
                 fill: false
             },
             {
-                data: [ 6, 6 ],
-                label: "arty-a35t-vpr-fasm2bels" ,
-                borderColor: "#ffce0f",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "nexys-video-yosys-vivado-uhdm" ,
-                borderColor: "#6c00f5",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "arty-a100t-vpr" ,
-                borderColor: "#eb00d2",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "nexys-video-yosys-vivado" ,
-                borderColor: "#ff2822",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "arty-a100t-vpr-fasm2bels" ,
-                borderColor: "#8f10ff",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "arty-a100t-yosys-vivado" ,
-                borderColor: "#007cb0",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "zybo-yosys-vivado" ,
-                borderColor: "#d62900",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "zybo-vivado" ,
-                borderColor: "#49ffff",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "arty-a35t-vpr" ,
-                borderColor: "#d50012",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "arty-a100t-yosys-vivado-uhdm" ,
-                borderColor: "#60ffff",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "basys3-vpr-fasm2bels" ,
-                borderColor: "#05ffb1",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "zybo-vpr-fasm2bels" ,
-                borderColor: "#40ffd2",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "basys3-yosys-vivado" ,
-                borderColor: "#4bffc1",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "nexys-video-vpr-fasm2bels" ,
-                borderColor: "#0600ac",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "arty-a35t-yosys-vivado" ,
-                borderColor: "#00c531",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "zybo-yosys-vivado-uhdm" ,
-                borderColor: "#ff63db",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "basys3-vpr" ,
-                borderColor: "#07caff",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "arty-a35t-vivado" ,
-                borderColor: "#ff2e81",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "nexys-video-vpr" ,
-                borderColor: "#00cbce",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
-                label: "arty-a100t-vivado" ,
-                borderColor: "#00a461",
-                fill: false
-            },
-            {
-                data: [ 6, 6 ],
+                data: [ 50, 50, 50, null, 50 ],
                 label: "basys3-vivado" ,
                 borderColor: "#00c91e",
                 fill: false
             },
             {
-                data: [ 6, 6 ],
-                label: "basys3-yosys-vivado-uhdm" ,
-                borderColor: "#00c3a3",
+                data: [ 57, 57, 57, 57, 57 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
                 fill: false
             },
             {
-                data: [ 6, 6 ],
-                label: "arty-a35t-yosys-vivado-uhdm" ,
-                borderColor: "#0061cf",
+                data: [ 57, 57, 57, 57, 57 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ 57, 57, 57, 57, 57 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ 57, 57, 57, 57, 57 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ 57, 57, 57, null, 57 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 57, 57, 57, null, 57 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
                 fill: false
             },
     ] ,
@@ -967,157 +580,79 @@
     "IOB-chart",
     "project: total IOB count",
     "",
-    [ "2021-08-15 09:58:17", "2021-08-16 09:58:17" ],
+    [ "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00" ],
     
     [
             {
-                data: [ 2, 2 ],
-                label: "zybo-vpr" ,
-                borderColor: "#a90066",
+                data: [ 35, 35, null, 35, 35 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
                 fill: false
             },
             {
-                data: [ 2, 2 ],
+                data: [ 35, 35, null, 35, 35 ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ 35, 35, null, 35, 35 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ 35, 35, null, 35, 35 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ 35, 35, 35, null, 35 ],
                 label: "nexys-video-vivado" ,
                 borderColor: "#50ff02",
                 fill: false
             },
             {
-                data: [ 2, 2 ],
-                label: "arty-a35t-vpr-fasm2bels" ,
-                borderColor: "#ffce0f",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "nexys-video-yosys-vivado-uhdm" ,
-                borderColor: "#6c00f5",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "arty-a100t-vpr" ,
-                borderColor: "#eb00d2",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "nexys-video-yosys-vivado" ,
-                borderColor: "#ff2822",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "arty-a100t-vpr-fasm2bels" ,
-                borderColor: "#8f10ff",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "arty-a100t-yosys-vivado" ,
-                borderColor: "#007cb0",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "zybo-yosys-vivado" ,
-                borderColor: "#d62900",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "zybo-vivado" ,
-                borderColor: "#49ffff",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "arty-a35t-vpr" ,
-                borderColor: "#d50012",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "arty-a100t-yosys-vivado-uhdm" ,
-                borderColor: "#60ffff",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "basys3-vpr-fasm2bels" ,
-                borderColor: "#05ffb1",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "zybo-vpr-fasm2bels" ,
-                borderColor: "#40ffd2",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "basys3-yosys-vivado" ,
-                borderColor: "#4bffc1",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "nexys-video-vpr-fasm2bels" ,
-                borderColor: "#0600ac",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "arty-a35t-yosys-vivado" ,
-                borderColor: "#00c531",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "zybo-yosys-vivado-uhdm" ,
-                borderColor: "#ff63db",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "basys3-vpr" ,
-                borderColor: "#07caff",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "arty-a35t-vivado" ,
-                borderColor: "#ff2e81",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "nexys-video-vpr" ,
-                borderColor: "#00cbce",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
-                label: "arty-a100t-vivado" ,
-                borderColor: "#00a461",
-                fill: false
-            },
-            {
-                data: [ 2, 2 ],
+                data: [ 35, 35, 35, null, 35 ],
                 label: "basys3-vivado" ,
                 borderColor: "#00c91e",
                 fill: false
             },
             {
-                data: [ 2, 2 ],
-                label: "basys3-yosys-vivado-uhdm" ,
-                borderColor: "#00c3a3",
+                data: [ 35, 35, 35, 35, 35 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
                 fill: false
             },
             {
-                data: [ 2, 2 ],
-                label: "arty-a35t-yosys-vivado-uhdm" ,
-                borderColor: "#0061cf",
+                data: [ 35, 35, 35, 35, 35 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ 35, 35, 35, 35, 35 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ 35, 35, 35, 35, 35 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ 35, 35, 35, null, 35 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 35, 35, 35, null, 35 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
                 fill: false
             },
     ] ,
@@ -1127,157 +662,79 @@
     "BRAM-chart",
     "project: total BRAM count",
     "",
-    [ "2021-08-15 09:58:17", "2021-08-16 09:58:17" ],
+    [ "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00" ],
     
     [
             {
-                data: [ 0, 0 ],
-                label: "zybo-vpr" ,
-                borderColor: "#a90066",
+                data: [ 4, 4, null, 4, 4 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
+                data: [ 4, 4, null, 4, 4 ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ 4, 4, null, 4, 4 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ 4, 4, null, 4, 4 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ 6, 6, 6, null, 6 ],
                 label: "nexys-video-vivado" ,
                 borderColor: "#50ff02",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
-                label: "arty-a35t-vpr-fasm2bels" ,
-                borderColor: "#ffce0f",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-yosys-vivado-uhdm" ,
-                borderColor: "#6c00f5",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-vpr" ,
-                borderColor: "#eb00d2",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-yosys-vivado" ,
-                borderColor: "#ff2822",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-vpr-fasm2bels" ,
-                borderColor: "#8f10ff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-yosys-vivado" ,
-                borderColor: "#007cb0",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-yosys-vivado" ,
-                borderColor: "#d62900",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-vivado" ,
-                borderColor: "#49ffff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a35t-vpr" ,
-                borderColor: "#d50012",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-yosys-vivado-uhdm" ,
-                borderColor: "#60ffff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "basys3-vpr-fasm2bels" ,
-                borderColor: "#05ffb1",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-vpr-fasm2bels" ,
-                borderColor: "#40ffd2",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "basys3-yosys-vivado" ,
-                borderColor: "#4bffc1",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-vpr-fasm2bels" ,
-                borderColor: "#0600ac",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a35t-yosys-vivado" ,
-                borderColor: "#00c531",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-yosys-vivado-uhdm" ,
-                borderColor: "#ff63db",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "basys3-vpr" ,
-                borderColor: "#07caff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a35t-vivado" ,
-                borderColor: "#ff2e81",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-vpr" ,
-                borderColor: "#00cbce",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-vivado" ,
-                borderColor: "#00a461",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
+                data: [ 6, 6, 6, null, 6 ],
                 label: "basys3-vivado" ,
                 borderColor: "#00c91e",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
-                label: "basys3-yosys-vivado-uhdm" ,
-                borderColor: "#00c3a3",
+                data: [ 4, 4, 4, 4, 4 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
-                label: "arty-a35t-yosys-vivado-uhdm" ,
-                borderColor: "#0061cf",
+                data: [ 4, 4, 4, 4, 4 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ 4, 4, 4, 4, 4 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ 4, 4, 4, 4, 4 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ 4, 4, 4, null, 4 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 4, 4, 4, null, 4 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
                 fill: false
             },
     ] ,
@@ -1287,157 +744,79 @@
     "PLL-chart",
     "project: total PLL count",
     "",
-    [ "2021-08-15 09:58:17", "2021-08-16 09:58:17" ],
+    [ "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00" ],
     
     [
             {
-                data: [ 0, 0 ],
-                label: "zybo-vpr" ,
-                borderColor: "#a90066",
+                data: [ 0, 0, null, 0, 0 ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
+                data: [ 0, 0, null, 0, 0 ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ 0, 0, null, 0, 0 ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ 0, 0, null, 0, 0 ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, null, 0 ],
                 label: "nexys-video-vivado" ,
                 borderColor: "#50ff02",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
-                label: "arty-a35t-vpr-fasm2bels" ,
-                borderColor: "#ffce0f",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-yosys-vivado-uhdm" ,
-                borderColor: "#6c00f5",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-vpr" ,
-                borderColor: "#eb00d2",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-yosys-vivado" ,
-                borderColor: "#ff2822",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-vpr-fasm2bels" ,
-                borderColor: "#8f10ff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-yosys-vivado" ,
-                borderColor: "#007cb0",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-yosys-vivado" ,
-                borderColor: "#d62900",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-vivado" ,
-                borderColor: "#49ffff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a35t-vpr" ,
-                borderColor: "#d50012",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-yosys-vivado-uhdm" ,
-                borderColor: "#60ffff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "basys3-vpr-fasm2bels" ,
-                borderColor: "#05ffb1",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-vpr-fasm2bels" ,
-                borderColor: "#40ffd2",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "basys3-yosys-vivado" ,
-                borderColor: "#4bffc1",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-vpr-fasm2bels" ,
-                borderColor: "#0600ac",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a35t-yosys-vivado" ,
-                borderColor: "#00c531",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-yosys-vivado-uhdm" ,
-                borderColor: "#ff63db",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "basys3-vpr" ,
-                borderColor: "#07caff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a35t-vivado" ,
-                borderColor: "#ff2e81",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-vpr" ,
-                borderColor: "#00cbce",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-vivado" ,
-                borderColor: "#00a461",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
+                data: [ 0, 0, 0, null, 0 ],
                 label: "basys3-vivado" ,
                 borderColor: "#00c91e",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
-                label: "basys3-yosys-vivado-uhdm" ,
-                borderColor: "#00c3a3",
+                data: [ 0, 0, 0, 0, 0 ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
-                label: "arty-a35t-yosys-vivado-uhdm" ,
-                borderColor: "#0061cf",
+                data: [ 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0 ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, 0, 0 ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, null, 0 ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ 0, 0, 0, null, 0 ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
                 fill: false
             },
     ] ,
@@ -1447,157 +826,79 @@
     "GLB-chart",
     "project: total GLB count",
     "",
-    [ "2021-08-15 09:58:17", "2021-08-16 09:58:17" ],
+    [ "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-07 20:10:15", "2021-08-11 12:44:25", "2021-08-12 08:31:00" ],
     
     [
             {
-                data: [ 0, 0 ],
-                label: "zybo-vpr" ,
-                borderColor: "#a90066",
+                data: [ null, null, null, null, null ],
+                label: "nexys-video-nextpnr-fpga-interchange" ,
+                borderColor: "#c2a200",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
+                data: [ null, null, null, null, null ],
+                label: "basys3-nextpnr-fpga-interchange" ,
+                borderColor: "#e36600",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null ],
+                label: "nexys-video-nextpnr-xilinx" ,
+                borderColor: "#00c5b8",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null ],
+                label: "basys3-nextpnr-xilinx" ,
+                borderColor: "#ff1291",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null ],
                 label: "nexys-video-vivado" ,
                 borderColor: "#50ff02",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
-                label: "arty-a35t-vpr-fasm2bels" ,
-                borderColor: "#ffce0f",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-yosys-vivado-uhdm" ,
-                borderColor: "#6c00f5",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-vpr" ,
-                borderColor: "#eb00d2",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-yosys-vivado" ,
-                borderColor: "#ff2822",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-vpr-fasm2bels" ,
-                borderColor: "#8f10ff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-yosys-vivado" ,
-                borderColor: "#007cb0",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-yosys-vivado" ,
-                borderColor: "#d62900",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-vivado" ,
-                borderColor: "#49ffff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a35t-vpr" ,
-                borderColor: "#d50012",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-yosys-vivado-uhdm" ,
-                borderColor: "#60ffff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "basys3-vpr-fasm2bels" ,
-                borderColor: "#05ffb1",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-vpr-fasm2bels" ,
-                borderColor: "#40ffd2",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "basys3-yosys-vivado" ,
-                borderColor: "#4bffc1",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-vpr-fasm2bels" ,
-                borderColor: "#0600ac",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a35t-yosys-vivado" ,
-                borderColor: "#00c531",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "zybo-yosys-vivado-uhdm" ,
-                borderColor: "#ff63db",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "basys3-vpr" ,
-                borderColor: "#07caff",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a35t-vivado" ,
-                borderColor: "#ff2e81",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "nexys-video-vpr" ,
-                borderColor: "#00cbce",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
-                label: "arty-a100t-vivado" ,
-                borderColor: "#00a461",
-                fill: false
-            },
-            {
-                data: [ 0, 0 ],
+                data: [ null, null, null, null, null ],
                 label: "basys3-vivado" ,
                 borderColor: "#00c91e",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
-                label: "basys3-yosys-vivado-uhdm" ,
-                borderColor: "#00c3a3",
+                data: [ null, null, null, null, null ],
+                label: "nexys-video-vpr-fasm2bels" ,
+                borderColor: "#0600ac",
                 fill: false
             },
             {
-                data: [ 0, 0 ],
-                label: "arty-a35t-yosys-vivado-uhdm" ,
-                borderColor: "#0061cf",
+                data: [ null, null, null, null, null ],
+                label: "basys3-vpr-fasm2bels" ,
+                borderColor: "#05ffb1",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null ],
+                label: "nexys-video-vpr" ,
+                borderColor: "#00cbce",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null ],
+                label: "basys3-vpr" ,
+                borderColor: "#07caff",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null ],
+                label: "nexys-video-yosys-vivado" ,
+                borderColor: "#ff2822",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null ],
+                label: "basys3-yosys-vivado" ,
+                borderColor: "#4bffc1",
                 fill: false
             },
     ] ,

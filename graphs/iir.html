@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <title>FPGA tool perf results: project iir</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.0/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+  <script src="/perf-tool-history/js/chartjs-plugin-zoom.min.js"></script>
 </head>
 <style>
   #resource-graphs{
@@ -16,6 +18,17 @@
     max-width: 31vw;
     max-height: 50vh;
     margin: 1vh 1vw 1vw 1vh;
+  }
+  #topbar {
+    background-color: lightgrey;
+  }
+  #topbar-platforms {
+    display: flex;
+    flex-direction: row;
+    padding-top: 0.5em;
+  }
+  #topbar-platforms div {
+    margin: 0.1em 0.5em 0.5em 0.5em;
   }
   #topbar-legend {
     max-height: 4em;
@@ -46,21 +59,44 @@
 </style>
 
 <body>
-  <div id="topbar-platforms">
-    <select>
-      <option value="<all_configs>">(all configurations)</option>
-        <option value="chandalar">chandalar</option>
-        <option value="quickfeather">quickfeather</option>
-    </select>
+  <div id="topbar">
+    <div id="topbar-platforms" onchange="selectSetsFromDropdown()">
+      <div>
+        <a href="/perf-tool-history">Index</a>
+      </div>
+      <div>
+        Board:
+      </div>
+      <div style="margin-left: 0em;">
+        <select id="topbar-platforms-dropdown">
+            <option value="0">
+              chandalar
+            </option>
+            <option value="1">
+              quickfeather
+            </option>
+            <option value="2">
+              (all configs)
+            </option>
+        </select>
+      </div>
+      <div>
+        <button onclick="selectSetsFromDropdown()">Unhide all</button>
+      </div>
+      <div>
+        <button onclick="hideAll()">Hide all</button>
+      </div>
+    </div>
   </div>
   <div id="topbar-legend">
     <div id="topbar-legend-flex">
-      <p>XD</p>
+      <p>Loading...</p>
     </div>
   </div>
 
   <canvas id="runtime-chart" width="300" height="150"></canvas>
-  <canvas id="frequency-chart", width="300" height="150"></canvas>
+    <canvas id="frequency-chart-clk", width="300" height="150">
+    </canvas>
   <div id="resource-graphs">
     <div>
       <canvas id="LUT-chart"></canvas>
@@ -84,13 +120,48 @@
       <canvas id="GLB-chart"></canvas>
     </div>
   </div>
+  <canvas id="wirelength-chart" width="300" height="150"></canvas>
+  <canvas id="memory-usage-chart" width="300" height="150"></canvas>
 
   <script>
 
   let charts = [];
+  let labels = [ "2021-07-08 19:12:50", "2021-07-09 01:13:16", "2021-07-09 07:12:52", "2021-07-09 13:12:52", "2021-07-10 01:12:01", "2021-07-10 07:12:15", "2021-07-10 13:12:55", "2021-07-10 19:12:29", "2021-07-11 01:12:34", "2021-07-11 07:12:10", "2021-07-11 13:11:42", "2021-07-11 19:11:39", "2021-07-12 01:13:44", "2021-07-12 07:12:57", "2021-07-12 13:12:25", "2021-07-12 19:13:17", "2021-07-13 01:12:41", "2021-07-13 07:12:53", "2021-07-13 13:11:28", "2021-07-13 19:12:25", "2021-07-14 01:13:30", "2021-07-14 07:12:54", "2021-07-14 13:12:27", "2021-07-14 19:12:14", "2021-07-15 01:12:13", "2021-07-15 07:12:49", "2021-07-15 13:13:11", "2021-07-15 19:12:33", "2021-07-16 01:12:57", "2021-07-16 07:12:54", "2021-07-16 13:12:11", "2021-07-16 19:13:23", "2021-07-17 01:12:30", "2021-07-17 07:15:43", "2021-07-17 13:12:24", "2021-07-17 19:12:03", "2021-07-18 01:11:53", "2021-07-18 07:12:14", "2021-07-18 13:12:38", "2021-07-18 19:11:50", "2021-07-19 01:13:04", "2021-07-19 07:12:51", "2021-07-19 13:13:05", "2021-07-19 19:12:39", "2021-07-20 01:12:25", "2021-07-20 07:13:10", "2021-07-20 13:12:56", "2021-07-20 18:40:33", "2021-07-20 19:13:37", "2021-07-21 01:11:12", "2021-07-21 07:11:49", "2021-07-21 13:12:55", "2021-07-21 19:12:40", "2021-07-22 01:11:59", "2021-07-22 07:12:30", "2021-07-22 13:12:43", "2021-07-22 19:12:26", "2021-07-23 01:12:41", "2021-07-23 07:12:57", "2021-07-23 13:12:53", "2021-07-23 19:11:31", "2021-07-24 01:13:54", "2021-07-24 07:12:54", "2021-07-24 13:11:31", "2021-07-24 19:11:54", "2021-07-25 01:11:12", "2021-07-25 07:12:42", "2021-07-25 13:12:10", "2021-07-25 19:11:51", "2021-07-26 01:12:08", "2021-07-26 07:12:27", "2021-07-26 13:12:12", "2021-07-26 19:12:47", "2021-07-27 01:12:47", "2021-07-27 07:11:40", "2021-07-27 13:12:35", "2021-07-28 01:11:51", "2021-07-28 07:12:27", "2021-07-28 13:11:51", "2021-07-28 19:12:53", "2021-07-29 01:11:38", "2021-07-29 07:13:49", "2021-07-29 13:12:24", "2021-07-29 19:12:12", "2021-07-30 01:12:29", "2021-07-30 06:50:45", "2021-07-30 07:12:42", "2021-07-30 13:13:21", "2021-07-31 01:13:55", "2021-07-31 07:13:06", "2021-07-31 13:12:37", "2021-07-31 19:11:37", "2021-08-01 01:11:45", "2021-08-01 07:13:38", "2021-08-01 13:12:09", "2021-08-01 19:12:13", "2021-08-02 01:11:54", "2021-08-02 07:16:26", "2021-08-02 13:12:35", "2021-08-02 19:12:59", "2021-08-03 01:12:25", "2021-08-03 07:12:44", "2021-08-03 13:14:52", "2021-08-06 13:13:20", "2021-08-06 19:12:52", "2021-08-07 01:13:05", "2021-08-07 07:14:07", "2021-08-07 13:12:51", "2021-08-07 19:12:26", "2021-08-08 01:12:44", "2021-08-08 07:12:58", "2021-08-08 13:12:40", "2021-08-08 19:13:11", "2021-08-09 01:12:23", "2021-08-09 07:12:40", "2021-08-09 10:38:47", "2021-08-09 13:12:49", "2021-08-09 19:13:42", "2021-08-10 01:13:05", "2021-08-10 07:12:54", "2021-08-10 13:12:37", "2021-08-10 19:12:41", "2021-08-11 01:12:27", "2021-08-11 07:13:06", "2021-08-11 13:14:08", "2021-08-12 01:13:01", "2021-08-12 07:13:28", "2021-08-12 19:12:59", "2021-08-13 13:12:56", "2021-08-13 19:13:29", "2021-08-14 01:13:43", "2021-08-14 07:12:45", "2021-08-14 13:12:35", "2021-08-14 19:13:12", "2021-08-15 01:13:14", "2021-08-15 19:12:57", "2021-08-16 01:12:39", "2021-08-16 07:12:14", "2021-08-16 13:12:21", "2021-08-16 19:15:39", "2021-08-17 01:12:46", "2021-08-18 19:12:42", "2021-08-19 13:13:03", "2021-08-20 03:35:53", "2021-08-20 08:58:18", "2021-08-20 16:45:27", "2021-08-20 21:30:49", "2021-08-21 03:18:45", "2021-08-21 08:53:14", "2021-08-21 16:26:04", "2021-08-21 21:35:29", "2021-08-22 05:12:05", "2021-08-22 11:06:20", "2021-08-22 15:29:39", "2021-08-22 20:09:11", "2021-08-23 02:49:12", "2021-08-23 09:42:26", "2021-08-23 16:32:13", "2021-08-23 21:14:14", "2021-08-24 04:23:19", "2021-08-24 11:22:15", "2021-08-24 14:44:32", "2021-08-24 23:05:39", "2021-08-25 03:30:39", "2021-08-25 16:23:34", "2021-08-25 21:31:26", "2021-08-26 04:07:38", "2021-08-26 12:39:27", "2021-08-26 16:17:41", "2021-08-26 22:57:53", "2021-08-27 05:28:13", "2021-08-27 09:19:57", "2021-08-27 16:31:26", "2021-08-27 22:07:39", "2021-08-28 04:55:43", "2021-08-28 11:31:12", "2021-08-28 18:09:16", "2021-08-28 19:36:58", "2021-08-29 05:22:47", "2021-08-29 10:40:46", "2021-08-29 18:40:54", "2021-08-29 21:40:24", "2021-08-30 04:16:29", "2021-08-30 11:31:11", "2021-08-30 15:28:26" ];
 
-  let dataset_sets = {
-    
+  let firstChart = null;
+
+  let datasetSets = {};
+  let datasetSetsIndices = [];
+    datasetSets["chandalar"] = [
+        "chandalar-quicklogic",
+    ];
+    datasetSetsIndices.push("chandalar");
+    datasetSets["quickfeather"] = [
+        "quickfeather-quicklogic",
+    ];
+    datasetSetsIndices.push("quickfeather");
+    datasetSets["(all configs)"] = [
+        "quickfeather-quicklogic",
+        "chandalar-quicklogic",
+    ];
+    datasetSetsIndices.push("(all configs)");
+  
+
+  function selectSets(name) {
+    configs = new Set(datasetSets[name]);
+    makeLegend(configs);
+
+    ds_cnt = firstChart.data.datasets.length;
+    for (let i = 0; i < ds_cnt; i++) {
+      dataset = firstChart.data.datasets[i];
+      if (!configs.has(dataset.label)) {
+        setDatasetVisible(i, false);
+        continue;
+      }
+      setDatasetVisible(i, true);
+    }
+
+    updateCharts();
   }
 
   function createLegendEntry(idx, name, color) {
@@ -100,23 +171,42 @@
            "class=\"topbar-legend-color-indicator\"></div></div>";
   }
 
-  function makeLegend(chart) {
+  function selectSetsFromDropdown() {
+    dropdown = document.getElementById("topbar-platforms-dropdown");
+    selectSets(datasetSetsIndices[dropdown.selectedIndex]);
+  }
+
+  function makeLegend(configs) {
     html_code = ""
-    ds_cnt = chart.data.datasets.length;
+    ds_cnt = firstChart.data.datasets.length;
     for (let i = 0; i < ds_cnt; i++) {
-      dataset = chart.data.datasets[i];
+      dataset = firstChart.data.datasets[i];
+      if (!configs.has(dataset.label))
+        continue;
       html_code += createLegendEntry(i, dataset.label, dataset.borderColor);
     }
 
-    document.getElementById("topbar-legend-flex").innerHTML = html_code
+    document.getElementById("topbar-legend-flex").innerHTML = html_code;
+  }
+
+  function updateCharts() {
+    for (let i = 0; i < charts.length; i++)
+      charts[i].update();
   }
 
   function setDatasetVisible(idx, visibility) {
     for (let i = 0; i < charts.length; i++) {
       chart = charts[i];
       chart.getDatasetMeta(idx).hidden = !visibility;
-      chart.update();
     }
+    
+    button = document.getElementById("topbar-legend-item-" + idx);
+    if (!button)
+      return;
+    if (visibility)
+      button.className = "";
+    else
+      button.className = "crosslined";
   }
 
   function onLegendClicked(event, legendItem, legend) {
@@ -126,18 +216,19 @@
   }
 
   function toggleDataset(idx) {
+    setDatasetVisible(idx, charts[0].getDatasetMeta(idx).hidden);
+    updateCharts();
+  }
+
+  function hideAll() {
     for (let i = 0; i < charts.length; i++) {
       chart = charts[i];
-      chart.getDatasetMeta(idx).hidden = !chart.getDatasetMeta(idx).hidden;
-      chart.update();
+      for (let j = 0; j < chart.data.datasets.length; j++) {
+        setDatasetVisible(i, false);
+      }
     }
 
-    button = document.getElementById("topbar-legend-item-" + idx)
-    
-    if (charts[0].getDatasetMeta(idx).hidden)
-      button.className = "crosslined"
-    else
-      button.className = ""
+    updateCharts();
   }
 
   function newLineChart(canvas_name, title, unitstr, labels, datasets, legend) {
@@ -147,8 +238,10 @@
         labels: labels,
         datasets: datasets
       },
+      spanGaps: true,
       options: {
-        spanGaps: true,
+        animation: false,
+        normailzed: true,
         plugins: {
           title: {
             display: true,
@@ -157,6 +250,26 @@
           legend: {
             display: legend,
             onClick: onLegendClicked
+          },
+          zoom: {
+            zoom: {
+              wheel: {
+                enabled: true,
+                modifierKey: "shift"
+              },
+              drag: {
+                enabled: true,
+                modifierKey: "shift"
+              },
+              pinch: {
+                enabled: true
+              },
+              mode: "x"
+            },
+            pan: {
+              enabled: true,
+              mode: "x"
+            }
           }
         },
         scales: {
@@ -172,21 +285,30 @@
     });
   }
 
-  let firstChart = newLineChart(
+  /* Select "(all configs)" on start */
+  for(let i = 0; i < datasetSetsIndices.length; i++) {
+    if (datasetSetsIndices[i] == "(all configs)") {
+      dropdown = document.getElementById("topbar-platforms-dropdown");
+      dropdown.selectedIndex = i;
+      break;
+    }
+  }
+
+  firstChart = newLineChart(
     "runtime-chart",
     "iir: total runtime",
     "s",
-    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+     labels,
     
     [
             {
-                data: [ 1068.703, 1072.981, 878.084, 865.196, 1195.54, 533.669, 634.538, 944.496, 615.157, 872.338, 618.457, 704.634, 971.168 ],
+                data: [ 1162.417, 898.648, 1150.648, 980.17, 933.109, 1518.325, 1280.339, 913.336, 999.751, 641.69, 1100.719, 1149.264, 1047.707, 1274.061, 1041.628, 1233.246, 1118.123, 952.685, 581.038, 940.242, 811.929, 1051.346, 1076.975, 1134.93, 1526.489, 1160.658, 1229.98, 1051.349, 1185.787, 1027.823, 963.714, 1000.85, 919.702, 1464.914, 1038.64, 726.503, 855.77, 1194.392, 1020.584, 996.742, 1903.873, 1276.342, 1157.599, 786.638, 861.042, 1273.453, 1041.221, 1112.792, 1091.499, 1066.737, 1011.904, 917.677, 1140.137, 1082.221, 1361.543, 1056.327, 1145.034, 1708.849, 1373.076, 901.67, 950.492, 942.554, 1136.423, 1430.67, 1289.37, 876.166, 925.523, 1033.652, 1490.515, 1635.088, 876.697, 943.545, 1230.966, 833.087, 1218.967, 1715.03, 851.735, 1199.206, 1062.492, 1200.387, 1357.547, 958.61, 995.65, 1339.902, 1138.501, 1201.396, 910.21, 1442.623, 1391.131, 945.999, 1710.112, 1142.871, 1346.346, 855.534, 1237.775, 985.457, 917.083, 921.35, 930.965, 914.167, 1365.983, 1564.483, 922.065, 872.849, 709.944, 690.739, 836.653, 682.71, 599.433, 631.77, 690.329, 666.147, 709.253, 575.237, 586.055, 1173.062, 967.236, 1033.671, 657.18, 830.719, 763.658, 872.337, 1117.01, 770.7, 752.905, 734.631, 584.324, 715.707, 740.885, 1027.644, 1225.206, 706.86, 1120.396, 768.728, 1052.333, 687.245, 806.7, 639.806, 765.912, 888.26, 716.891, 1111.379, 837.499, 674.291, 650.99, 1069.0, 596.12, 775.439, 768.267, 1019.429, 762.828, 850.947, 792.092, 1368.912, 605.59, 560.946, 637.539, 725.803, 648.229, 728.68, 1148.781, 639.075, 860.17, 849.322, 699.511, 843.17, 634.588, 1342.635, 1184.844, 795.204, 748.46, 604.837, 907.675, 858.788, 1328.596, 855.204, 655.74, 621.398, 647.017, 740.347, 725.867, 772.009, 979.67, 605.156, 705.959 ],
                 label: "chandalar-quicklogic" ,
                 borderColor: "#00e70b",
                 fill: false
             },
             {
-                data: [ 1397.431, 1163.882, 733.398, 1082.153, 770.368, 658.425, 659.841, 846.784, 700.524, 648.095, 697.741, 847.968, 727.587 ],
+                data: [ 1760.519, 961.722, 1918.499, 1107.59, 1066.238, 2055.525, 1565.431, 877.643, 1078.261, 815.146, 1513.074, 1257.959, 1119.863, 1229.079, 1069.2, 1017.729, 866.676, 1093.893, 1564.691, 1259.974, 976.208, 975.889, 1042.339, 850.058, 2005.711, 1049.815, 2042.382, 955.082, 1031.318, 1274.532, 1399.698, 1178.121, 1171.094, 1422.621, 1163.184, 1027.914, 877.363, 994.642, 994.197, 902.695, 950.514, 887.943, 1065.966, 1107.709, 683.263, 920.25, 1036.191, 1194.121, 905.227, 840.964, 1515.454, 1170.935, 1358.985, 1507.983, 1208.552, 1528.104, 1073.987, 1224.712, 975.954, 1029.833, 1230.103, 1380.452, 1087.827, 1239.785, 878.702, 1053.558, 933.626, 906.168, 1211.381, 1490.251, 611.024, 1279.211, 1186.982, 908.871, 1077.596, 1236.972, 952.004, 1374.456, 1111.451, 1838.198, 796.594, 818.819, 899.879, 869.035, 1038.205, 866.514, 1397.068, 1457.711, 877.789, 892.132, 1431.794, 1112.095, 1087.669, 1069.249, 1076.035, 1142.459, 970.67, 906.324, 876.975, 1391.272, 740.322, 1807.266, 1179.182, 685.418, 715.905, 695.165, 724.041, 649.248, 1239.543, 703.268, 671.776, 1278.706, 780.252, 574.248, 575.619, 708.769, 592.505, 712.167, 584.231, 671.466, 784.774, 585.358, 1024.181, 880.096, 856.678, 666.378, 688.428, 619.638, 716.958, 658.291, 1165.497, 893.11, 736.631, 792.559, 666.896, 874.804, 688.218, 842.487, 966.553, 1059.151, 775.1, 1058.364, 532.466, 713.678, 634.799, 1173.389, 1331.201, 670.17, 709.409, 1106.363, 611.045, 931.326, 627.89, 814.577, 588.789, 662.207, 811.561, 758.029, 634.28, 675.678, 770.317, 622.443, 872.012, 701.992, 667.445, 840.133, 624.98, 747.717, 682.255, 954.925, 539.976, 570.092, 836.906, 1070.012, 1159.0, 683.54, 720.446, 639.628, 881.348, 621.636, 758.359, 825.599, 721.796, 683.343, 566.067 ],
                 label: "quickfeather-quicklogic" ,
                 borderColor: "#3cffb6",
                 fill: false
@@ -196,46 +318,45 @@
   );
 
   charts.push(firstChart);
-  makeLegend(firstChart);
+  makeLegend(new Set(datasetSets["(all configs)"]));
 
-  charts.push(newLineChart(
-    "frequency-chart",
-    "iir: actual frequency",
-    "MHz",
-    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
-    
-    [
-            {
-                data: [ 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314 ],
-                label: "chandalar-quicklogic" ,
-                borderColor: "#00e70b",
-                fill: false
-            },
-            {
-                data: [ 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314 ],
-                label: "quickfeather-quicklogic" ,
-                borderColor: "#3cffb6",
-                fill: false
-            },
-    ] ,
-    false
-  ));
+    charts.push(newLineChart(
+      "frequency-chart-clk",
+      "iir: clk actual frequency",
+      "MHz",
+      labels,
+      [
+          {
+            data: [ 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314 ],
+            label: "chandalar-quicklogic",
+            borderColor: "#00e70b",
+            fill: false
+          },
+          {
+            data: [ 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314, 8.314 ],
+            label: "quickfeather-quicklogic",
+            borderColor: "#3cffb6",
+            fill: false
+          },
+      ],
+      false
+    ));
 
   charts.push(newLineChart(
     "LUT-chart",
     "iir: total LUT count",
     "",
-    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    labels,
     
     [
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "chandalar-quicklogic" ,
                 borderColor: "#00e70b",
                 fill: false
             },
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "quickfeather-quicklogic" ,
                 borderColor: "#3cffb6",
                 fill: false
@@ -247,17 +368,17 @@
     "DFF-chart",
     "iir: total DFF count",
     "",
-    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    labels,
     
     [
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "chandalar-quicklogic" ,
                 borderColor: "#00e70b",
                 fill: false
             },
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "quickfeather-quicklogic" ,
                 borderColor: "#3cffb6",
                 fill: false
@@ -269,17 +390,17 @@
     "CARRY-chart",
     "iir: total CARRY count",
     "",
-    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    labels,
     
     [
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "chandalar-quicklogic" ,
                 borderColor: "#00e70b",
                 fill: false
             },
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "quickfeather-quicklogic" ,
                 borderColor: "#3cffb6",
                 fill: false
@@ -291,17 +412,17 @@
     "IOB-chart",
     "iir: total IOB count",
     "",
-    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    labels,
     
     [
             {
-                data: [ 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38 ],
+                data: [ 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38 ],
                 label: "chandalar-quicklogic" ,
                 borderColor: "#00e70b",
                 fill: false
             },
             {
-                data: [ 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38 ],
+                data: [ 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38, 38 ],
                 label: "quickfeather-quicklogic" ,
                 borderColor: "#3cffb6",
                 fill: false
@@ -313,17 +434,17 @@
     "BRAM-chart",
     "iir: total BRAM count",
     "",
-    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    labels,
     
     [
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "chandalar-quicklogic" ,
                 borderColor: "#00e70b",
                 fill: false
             },
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "quickfeather-quicklogic" ,
                 borderColor: "#3cffb6",
                 fill: false
@@ -335,17 +456,17 @@
     "PLL-chart",
     "iir: total PLL count",
     "",
-    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    labels,
     
     [
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "chandalar-quicklogic" ,
                 borderColor: "#00e70b",
                 fill: false
             },
             {
-                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+                data: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
                 label: "quickfeather-quicklogic" ,
                 borderColor: "#3cffb6",
                 fill: false
@@ -357,17 +478,63 @@
     "GLB-chart",
     "iir: total GLB count",
     "",
-    [ "2021-07-07 16:14:42", "2021-07-22 08:08:24", "2021-07-22 16:05:50", "2021-07-23 07:30:56", "2021-07-28 11:50:37", "2021-07-30 12:49:29", "2021-08-02 06:55:55", "2021-08-05 09:06:14", "2021-08-07 18:32:36", "2021-08-13 06:52:00", "2021-08-16 10:23:05", "2021-08-16 11:42:29", "2021-08-16 13:03:41" ],
+    labels,
     
     [
             {
-                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
                 label: "chandalar-quicklogic" ,
                 borderColor: "#00e70b",
                 fill: false
             },
             {
-                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  charts.push(newLineChart(
+    "wirelength-chart",
+    "iir: wirelength",
+    "",
+    labels,
+    
+    [
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "quickfeather-quicklogic" ,
+                borderColor: "#3cffb6",
+                fill: false
+            },
+    ] ,
+    false
+  ));
+
+  charts.push(newLineChart(
+    "memory-usage-chart",
+    "iir: maximum memory usage",
+    "",
+    labels,
+    
+    [
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
+                label: "chandalar-quicklogic" ,
+                borderColor: "#00e70b",
+                fill: false
+            },
+            {
+                data: [ null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ],
                 label: "quickfeather-quicklogic" ,
                 borderColor: "#3cffb6",
                 fill: false
